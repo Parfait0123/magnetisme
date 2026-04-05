@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Spin s=5/2 · Monte Carlo 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════
+   TOKENS
+══════════════════════════════════════ */
+:root{
+  --bg:#050810; --bg2:#080d1a;
+  --g1:#0ea5e9; --g2:#818cf8; --g3:#f472b6; --gold:#fbbf24;
+  --em:#34d399;  --danger:#f87171;
+  --t1:#f0f6ff;  --t2:#94a3b8;  --t3:#475569;
+  --panel:rgba(5,8,16,.82);
+  --bdr:rgba(148,163,184,.09); --bdr2:rgba(148,163,184,.2);
+  --s0:#1e3a8a; --s1:#1d4ed8; --s2:#7dd3fc;
+  --s3:#fda4af; --s4:#dc2626; --s5:#7f1d1d;
+  /* layout tokens (overridden in media queries) */
+  --hh:52px; --pl:248px; --pr:256px; --pb:148px;
+}
+
+/* ══════════════════════════════════════
+   RESET / BASE
+══════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;
+  background:var(--bg);font-family:'Syne',sans-serif;color:var(--t1);
+  -webkit-tap-highlight-color:transparent}
+#bg{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%}
+
+/* vignette */
+body::after{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse 75% 75% at 50% 50%,transparent 30%,rgba(5,8,16,.72)100%)}
+
+/* ══════════════════════════════════════
+   INTRO
+══════════════════════════════════════ */
+#intro{position:fixed;inset:0;z-index:9000;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  overflow:hidden;cursor:pointer}
+#ic{position:absolute;inset:0;width:100%;height:100%}
+.iw{position:relative;z-index:2;text-align:center;padding:24px;pointer-events:none}
+.it{font-size:clamp(32px,7vw,80px);font-weight:800;letter-spacing:.06em;line-height:1.05;
+  background:linear-gradient(130deg,#38bdf8 0%,#818cf8 35%,#f472b6 65%,#fbbf24 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  opacity:0;animation:aUp 1s ease .4s forwards}
+.is{font-size:clamp(9px,1.8vw,13px);font-weight:400;letter-spacing:.2em;color:var(--t3);
+  text-transform:uppercase;margin-top:10px;
+  opacity:0;animation:aUp 1s ease .7s forwards}
+.itags{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:28px 0;
+  opacity:0;animation:aUp 1s ease 1s forwards}
+.itag{font-family:'Space Mono',monospace;font-size:clamp(8px,1.2vw,10px);
+  padding:5px 13px;border:1px solid rgba(14,165,233,.4);border-radius:3px;
+  color:var(--g1);background:rgba(14,165,233,.07);letter-spacing:.08em}
+.ibar{width:min(280px,60vw);height:1px;background:rgba(255,255,255,.08);
+  margin:0 auto 18px;overflow:hidden;
+  opacity:0;animation:aUp .5s ease 1.2s forwards}
+.ibar-f{height:100%;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));
+  animation:iFill 2.2s cubic-bezier(.4,0,.2,1) 1.4s both}
+.icta{font-size:clamp(9px,1.4vw,11px);font-weight:600;letter-spacing:.16em;
+  color:var(--t3);text-transform:uppercase;
+  opacity:0;animation:aUp .5s ease 2s forwards,iBlink 2s ease 2.5s infinite}
+.iline{position:absolute;pointer-events:none}
+@keyframes aUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes iFill{from{width:0;opacity:0}to{width:100%;opacity:1}}
+@keyframes iBlink{0%,100%{opacity:.35}50%{opacity:1}}
+#intro.out{animation:iOut .7s ease forwards;pointer-events:none}
+@keyframes iOut{to{opacity:0;transform:scale(1.03)}}
+
+/* ══════════════════════════════════════
+   HEADER  – toujours visible
+══════════════════════════════════════ */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  height:var(--hh);display:flex;align-items:center;gap:10px;
+  padding:0 14px;border-bottom:1px solid var(--bdr);
+  background:rgba(5,8,16,.78);backdrop-filter:blur(32px);
+  -webkit-backdrop-filter:blur(32px)
+}
+.hlogo{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.hmark{width:26px;height:26px;flex-shrink:0}
+.htext{flex:1;min-width:0;overflow:hidden}
+.htitle{font-size:clamp(9px,1.5vw,12px);font-weight:700;letter-spacing:.07em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hsub{font-size:clamp(7px,1vw,9px);color:var(--t3);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;margin-top:1px}
+.hchips{display:flex;gap:5px;flex-shrink:0}
+.chip{font-family:'Space Mono',monospace;font-size:8px;padding:3px 8px;
+  border-radius:3px;border:1px solid var(--bdr);color:var(--t3);
+  letter-spacing:.05em;white-space:nowrap}
+.chip.live{border-color:rgba(52,211,153,.4);color:var(--em);display:flex;align-items:center;gap:4px}
+.chip.live::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--em);flex-shrink:0;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ══════════════════════════════════════
+   CARD  – shared
+══════════════════════════════════════ */
+.card{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;
+  padding:11px 13px;backdrop-filter:blur(36px);-webkit-backdrop-filter:blur(36px);
+  position:relative;overflow:hidden;transition:border-color .25s}
+.card:hover{border-color:var(--bdr2)}
+.gline{position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--g1) 35%,var(--g2) 65%,transparent);opacity:.38}
+.ct{font-size:8px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:9px;display:flex;align-items:center;gap:5px}
+.ctd{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+
+/* sliders */
+.sr{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.sl{font-family:'Space Mono',monospace;font-size:8px;color:var(--t2);min-width:26px}
+.sv{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--g1);min-width:34px;text-align:right}
+input[type=range]{flex:1;-webkit-appearance:none;height:1.5px;
+  background:rgba(148,163,184,.15);border-radius:1px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+  width:13px;height:13px;border-radius:50%;background:var(--bg2);
+  border:1.5px solid var(--g1);cursor:pointer;transition:transform .15s}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.3)}
+
+/* metrics */
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.met{padding:7px 9px;border-radius:6px;background:rgba(255,255,255,.025);border:1px solid var(--bdr)}
+.ml{font-family:'Space Mono',monospace;font-size:7px;color:var(--t3);letter-spacing:.04em;margin-bottom:3px}
+.mv{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;line-height:1}
+.mv.c1{color:var(--g1)}.mv.c2{color:#fb923c}.mv.c3{color:#60a5fa}.mv.c4{color:var(--em)}
+
+/* buttons */
+.brow{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.btn{font-size:8px;font-weight:700;letter-spacing:.07em;padding:5px 10px;
+  border-radius:5px;border:1px solid var(--bdr2);background:rgba(255,255,255,.04);
+  color:var(--t2);cursor:pointer;transition:all .18s;font-family:'Syne',sans-serif;
+  white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.btn:hover,.btn:active{background:rgba(14,165,233,.12);border-color:rgba(14,165,233,.5);color:var(--g1)}
+.btn.on{background:rgba(14,165,233,.15);border-color:var(--g1);color:var(--g1);
+  box-shadow:0 0 14px rgba(14,165,233,.18)}
+.btn.r{border-color:rgba(248,113,113,.3);color:var(--danger)}
+.btn.r:hover,.btn.r:active{background:rgba(248,113,113,.1)}
+.btn.g{border-color:rgba(251,191,36,.3);color:var(--gold)}
+.btn.g:hover,.btn.g:active{background:rgba(251,191,36,.1)}
+
+/* counters */
+.cntrow{display:flex;gap:5px;margin-top:7px}
+.cnt{flex:1;text-align:center;padding:6px 3px;
+  background:rgba(255,255,255,.025);border-radius:5px;border:1px solid var(--bdr)}
+.cv2{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--g1);line-height:1}
+.cl2{font-size:6px;font-weight:600;letter-spacing:.08em;color:var(--t3);
+  text-transform:uppercase;margin-top:2px}
+
+/* metropolis */
+.mbox{font-family:'Space Mono',monospace;font-size:8.5px;line-height:2;color:var(--t2)}
+.mbox .k{color:var(--t3)}.mbox .v{color:var(--g1);font-weight:700}
+.mbox .ok{color:var(--em);font-weight:700}.mbox .no{color:var(--danger);font-weight:700}
+.feq{margin:6px 0;padding:7px 10px;border-radius:5px;
+  background:rgba(251,191,36,.06);border-left:2px solid rgba(251,191,36,.5);
+  font-family:'Space Mono',monospace;font-size:8px;color:var(--gold);line-height:1.8}
+.jw{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:6px;overflow:hidden}
+.jf{height:100%;border-radius:2px;transition:width .3s,background .3s;box-shadow:0 0 6px currentColor}
+
+/* phase */
+.ppill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;
+  border-radius:14px;border:1px solid var(--bdr);background:rgba(255,255,255,.03);
+  font-size:9px;font-weight:700;margin-top:6px;transition:all .5s}
+.pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:all .5s}
+
+/* legend */
+.sleg{display:flex;gap:2px;margin-top:6px;border-radius:4px;overflow:hidden}
+.sld{flex:1;padding:4px 1px;text-align:center;
+  font-family:'Space Mono',monospace;font-size:7px;font-weight:700;color:rgba(255,255,255,.9)}
+
+/* charts */
+canvas.ch2{width:100%;display:block;border-radius:4px;background:rgba(0,0,0,.28)}
+
+/* thermo tabs */
+.ttabs{display:flex;gap:3px;margin-bottom:6px}
+.ttab{font-family:'Space Mono',monospace;font-size:7px;padding:3px 7px;
+  border-radius:4px;border:1px solid var(--bdr);color:var(--t3);cursor:pointer;transition:all .18s}
+.ttab.on{border-color:rgba(14,165,233,.5);color:var(--g1);background:rgba(14,165,233,.08)}
+
+/* mode chips */
+.modesel{display:flex;gap:3px;margin-bottom:7px}
+.mchip{font-size:7px;font-weight:700;padding:4px 8px;border-radius:4px;
+  border:1px solid var(--bdr);color:var(--t3);cursor:pointer;transition:all .18s;letter-spacing:.06em}
+.mchip.on{border-color:rgba(129,140,248,.6);color:var(--g2);background:rgba(129,140,248,.1)}
+
+/* info */
+.ibox{font-family:'Space Mono',monospace;font-size:7.5px;line-height:2.1;color:var(--t3)}
+.ibox .hl{color:var(--gold)}
+.hamil-eq{font-family:'Space Mono',monospace;font-size:8px;color:var(--gold);line-height:2.2}
+.hamil-note{font-family:'Space Mono',monospace;font-size:7.5px;color:var(--t3);line-height:2;margin-top:3px}
+
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.card{animation:fi .4s ease both}
+
+/* ══════════════════════════════════════
+   LAYOUT — DESKTOP  ≥ 1024px
+══════════════════════════════════════ */
+@media(min-width:1024px){
+  /* left panel */
+  .pl{position:fixed;left:10px;top:calc(var(--hh)+8px);bottom:10px;
+    width:var(--pl);z-index:200;
+    display:flex;flex-direction:column;gap:6px;
+    overflow-y:auto;scrollbar-width:none}
+  .pl::-webkit-scrollbar{display:none}
+
+  /* right panel */
+  .pr{position:fixed;right:10px;top:calc(var(--hh)+8px);bottom:calc(var(--pb)+8px);
+    width:var(--pr);z-index:200;
+    display:flex;flex-direction:column;gap:6px;
+    overflow-y:auto;scrollbar-width:none}
+  .pr::-webkit-scrollbar{display:none}
+
+  /* bottom bar */
+  .pb{position:fixed;bottom:0;z-index:200;padding:0 0 8px;
+    left:calc(var(--pl)+18px);right:calc(var(--pr)+18px);
+    height:var(--pb)}
+  .pb-inner{width:100%;height:100%;display:flex;
+    background:var(--panel);border:1px solid var(--bdr);border-radius:10px;
+    backdrop-filter:blur(36px);overflow:hidden}
+  .pb-sec{flex:1;padding:9px 12px;min-width:0;border-right:1px solid var(--bdr)}
+  .pb-sec:last-child{border-right:none;max-width:175px}
+
+  /* mobile-only elements hidden */
+  .mob-tab-bar{display:none}
+  .mob-panel{display:none}
+  .hsub{display:block}
+  .chip-steps,.chip-fps{display:inline}
+}
+
+/* ══════════════════════════════════════
+   LAYOUT — TABLET  768 – 1023px
+══════════════════════════════════════ */
+@media(min-width:768px) and (max-width:1023px){
+  :root{--pl:230px}
+  /* only left panel */
+  .pl{position:fixed;left:10px;top:calc(var(--hh)+8px);bottom:10px;
+    width:var(--pl);z-index:200;
+    display:flex;flex-direction:column;gap:6px;
+    overflow-y:auto;scrollbar-width:none}
+  .pl::-webkit-scrollbar{display:none}
+  /* hide right + bottom */
+  .pr{display:none}
+  .pb{display:none}
+  .mob-tab-bar{display:none}
+  .mob-panel{display:none}
+  .hsub{display:none}
+  .chip-steps,.chip-fps{display:none}
+}
+
+/* ══════════════════════════════════════
+   DRAWER ELEMENTS — hidden outside mobile
+══════════════════════════════════════ */
+#mob-menu-btn,#mob-backdrop,#mob-drawer,#mob-status{display:none}
+
+/* ══════════════════════════════════════
+   LAYOUT — MOBILE  < 768px
+══════════════════════════════════════ */
+@media(max-width:767px){
+  :root{--hh:48px}
+  /* hide desktop panels */
+  .pl,.pr,.pb{display:none}
+  .hsub{display:none}
+  .chip-steps,.chip-fps{display:none}
+
+  /* ─── TAB BAR: hidden on mobile (replaced by drawer) ─── */
+  .mob-tab-bar{display:none}
+
+  /* ─── MOBILE PANELS: hidden by default (shown in drawer) ─── */
+  .mob-panel{display:none}
+  .mob-panel.visible{display:none}
+
+  /* ─── HAMBURGER BUTTON ─── */
+  #mob-menu-btn{
+    position:fixed;bottom:22px;right:18px;z-index:600;
+    width:52px;height:52px;border-radius:50%;
+    background:rgba(14,165,233,.18);
+    border:1.5px solid rgba(14,165,233,.5);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+    box-shadow:0 0 20px rgba(14,165,233,.25),0 4px 20px rgba(0,0,0,.4);
+    transition:all .2s
+  }
+  #mob-menu-btn:active{transform:scale(.92)}
+  #mob-menu-btn svg{width:22px;height:22px;stroke:var(--g1);fill:none;
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ─── BACKDROP ─── */
+  #mob-backdrop{
+    position:fixed;inset:0;z-index:550;
+    background:rgba(5,8,16,.6);backdrop-filter:blur(4px);
+    display:none;opacity:0;transition:opacity .3s
+  }
+  #mob-backdrop.open{display:block;opacity:1}
+
+  /* ─── DRAWER ─── */
+  #mob-drawer{
+    position:fixed;left:0;right:0;bottom:0;z-index:560;
+    max-height:82vh;
+    background:rgba(5,8,16,.97);border-top:1px solid var(--bdr2);
+    border-radius:18px 18px 0 0;
+    display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1)
+  }
+  #mob-drawer.open{transform:translateY(0)}
+
+  /* drawer handle */
+  #mob-drawer-handle{
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    padding:10px 0 4px
+  }
+  #mob-drawer-handle::before{
+    content:'';width:40px;height:4px;border-radius:2px;
+    background:rgba(148,163,184,.3)
+  }
+
+  /* drawer tab bar */
+  #mob-drawer-tabs{
+    flex-shrink:0;display:flex;
+    border-bottom:1px solid var(--bdr);
+    overflow-x:auto;scrollbar-width:none;padding:0 8px
+  }
+  #mob-drawer-tabs::-webkit-scrollbar{display:none}
+  .mob-dtab{
+    flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+    gap:4px;padding:8px 14px;cursor:pointer;
+    border:none;background:none;color:var(--t3);
+    font-family:'Syne',sans-serif;font-size:9px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;
+    -webkit-tap-highlight-color:transparent;transition:color .2s;
+    border-bottom:2px solid transparent;margin-bottom:-1px
+  }
+  .mob-dtab svg{width:16px;height:16px;stroke:currentColor;fill:none;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .mob-dtab.active{color:var(--g1);border-bottom-color:var(--g1)}
+
+  /* drawer content */
+  #mob-drawer-content{
+    flex:1;overflow-y:auto;scrollbar-width:none;padding:10px 12px 24px
+  }
+  #mob-drawer-content::-webkit-scrollbar{display:none}
+
+  /* drawer panels */
+  .mob-dpanel{display:none;flex-direction:column;gap:8px}
+  .mob-dpanel.active{display:flex}
+
+  /* ─── FLOATING LIVE STATUS ─── */
+  #mob-status{
+    position:fixed;left:12px;bottom:22px;z-index:540;
+    display:flex;flex-direction:column;gap:4px;pointer-events:none
+  }
+  .mob-stat-pill{
+    display:flex;align-items:center;gap:6px;
+    padding:5px 10px;border-radius:20px;
+    background:rgba(5,8,16,.75);border:1px solid var(--bdr);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    font-family:'Space Mono',monospace
+  }
+  .mob-stat-label{font-size:7px;color:var(--t3);letter-spacing:.04em}
+  .mob-stat-value{font-size:11px;font-weight:700;color:var(--g1)}
+  .mob-stat-dot{width:5px;height:5px;border-radius:50%;background:var(--em);
+    flex-shrink:0;animation:blink 2s infinite}
+}
+</style>
+</head>
+<body>
+
+<!-- 3D canvas -->
+<canvas id="bg"></canvas>
+
+<!-- ══════════════════════════════════════
+     INTRO
+══════════════════════════════════════ -->
+<div id="intro">
+  <canvas id="ic"></canvas>
+  <div class="iw">
+    <div class="it">Spin s = 5/2</div>
+    <div class="is">Réseau Hexagonal · Monte Carlo 3D</div>
+    <div class="itags">
+      <span class="itag">METROPOLIS-HASTINGS</span>
+      <span class="itag">CHAÎNES DE MARKOV</span>
+      <span class="itag">WEBGL · THREE.JS</span>
+      <span class="itag">TRANSITION DE PHASE</span>
+    </div>
+    <div class="ibar"><div class="ibar-f"></div></div>
+    <div class="icta">Toucher pour entrer</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HEADER
+══════════════════════════════════════ -->
+<header>
+  <div class="hlogo">
+    <svg class="hmark" viewBox="0 0 26 26" fill="none">
+      <defs>
+        <linearGradient id="hg" x1="0" y1="0" x2="26" y2="26">
+          <stop offset="0%" stop-color="#0ea5e9"/>
+          <stop offset="50%" stop-color="#818cf8"/>
+          <stop offset="100%" stop-color="#f472b6"/>
+        </linearGradient>
+      </defs>
+      <polygon points="13,1 24,7.5 24,18.5 13,25 2,18.5 2,7.5"
+        stroke="url(#hg)" stroke-width=".8" fill="rgba(14,165,233,0.07)"/>
+      <polygon points="13,6 20,10 20,16 13,20 6,16 6,10"
+        stroke="url(#hg)" stroke-width=".6" fill="none" opacity=".4"/>
+      <circle cx="13" cy="13" r="2.2" fill="url(#hg)"/>
+    </svg>
+    <div class="htext">
+      <div class="htitle">Réseau Hexagonal · Spin s = 5/2</div>
+      <div class="hsub">Monte Carlo · Metropolis-Hastings · Chaînes de Markov · WebGL 3D</div>
+    </div>
+  </div>
+  <div class="hchips">
+    <span class="chip live"><span id="hLive">EN COURS</span></span>
+    <span class="chip" id="hPhase">—</span>
+    <span class="chip chip-steps" id="hSteps">0 steps</span>
+    <span class="chip chip-fps"  id="hFPS">— fps</span>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════
+     LEFT PANEL (desktop/tablet)
+══════════════════════════════════════ -->
+<div class="pl">
+
+  <div class="card" style="animation-delay:.04s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g1);box-shadow:0 0 5px var(--g1)"></div>Paramètres physiques</div>
+    <div class="sr"><span class="sl">T/J</span><input type="range" id="sT" min=".1" max="8" step=".05" value="3"><span class="sv" id="vT">3.00</span></div>
+    <div class="sr"><span class="sl">J₂</span><input type="range" id="sJ2" min="-1" max="1" step=".05" value="0"><span class="sv" id="vJ2">0.00</span></div>
+    <div class="sr"><span class="sl">h</span><input type="range" id="sH" min="-3" max="3" step=".1" value="0"><span class="sv" id="vH">0.00</span></div>
+    <div class="sr"><span class="sl">L</span><input type="range" id="sL" min="4" max="14" step="2" value="8"><span class="sv" id="vL">8</span></div>
+    <div class="sleg" id="sleg"></div>
+  </div>
+
+  <div class="card" style="animation-delay:.07s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--em);box-shadow:0 0 5px var(--em)"></div>Contrôle Monte Carlo</div>
+    <div class="modesel">
+      <div class="mchip on" onclick="setMode('auto',this)">AUTO</div>
+      <div class="mchip" onclick="setMode('slow',this)">SLOW</div>
+      <div class="mchip" onclick="setMode('step',this)">STEP</div>
+    </div>
+    <div class="brow">
+      <button class="btn on" id="bRun" onclick="toggleRun()">▶ RUN</button>
+      <button class="btn r"  onclick="doReset()">RESET</button>
+      <button class="btn g"  onclick="startScan()">SCAN T</button>
+    </div>
+    <div class="brow">
+      <button class="btn" onclick="setOrder()">ORDONNÉ</button>
+      <button class="btn" onclick="setRand()">ALÉATOIRE</button>
+      <button class="btn" id="bCin" onclick="toggleCinema()">CINÉMA</button>
+    </div>
+    <div class="cntrow">
+      <div class="cnt"><div class="cv2" id="cStep">0</div><div class="cl2">Steps</div></div>
+      <div class="cnt"><div class="cv2" id="cAcc" style="color:var(--em)">—</div><div class="cl2">Accept</div></div>
+      <div class="cnt"><div class="cv2" id="cSw" style="color:var(--gold)">—</div><div class="cl2">sw/s</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="animation-delay:.10s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--gold);box-shadow:0 0 5px var(--gold)"></div>Metropolis · step actuel</div>
+    <div class="mbox">
+      <div><span class="k">i    </span><span class="v" id="mI">—</span></div>
+      <div><span class="k">sₒ   </span><span class="v" id="mO">—</span></div>
+      <div><span class="k">s'   </span><span class="v" id="mN">—</span></div>
+      <div><span class="k">Σ sⱼ </span><span class="v" id="mS">—</span></div>
+    </div>
+    <div class="feq" id="mEq">ΔE = —</div>
+    <div class="mbox">
+      <div><span class="k">Pacc </span><span class="v" id="mP">—</span></div>
+      <div><span class="k">→    </span><span id="mR">—</span></div>
+    </div>
+    <div class="jw"><div class="jf" id="jf" style="width:0;color:var(--g1);background:currentColor"></div></div>
+  </div>
+
+  <div class="card" style="animation-delay:.13s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g2);box-shadow:0 0 5px var(--g2)"></div>Phase magnétique</div>
+    <div class="ppill"><div class="pdot" id="pdot"></div><span id="ptxt">—</span></div>
+    <div style="margin-top:8px" class="ibox">
+      Tc ≈ <span class="hl">~4.5 J</span><br>
+      ξ(T) = <span class="hl" id="xiVal">—</span><br>
+      N = <span class="hl" id="nVal">128</span> spins
+    </div>
+  </div>
+
+  <div class="card" style="animation-delay:.16s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g3);box-shadow:0 0 5px var(--g3)"></div>Visuel 3D</div>
+    <div class="brow">
+      <button class="btn on" id="bArr" onclick="tog('arrows','bArr')">FLÈCHES</button>
+      <button class="btn on" id="bBon" onclick="tog('bonds','bBon')">LIAISONS</button>
+      <button class="btn on" id="bWav" onclick="tog('waves','bWav')">ONDES</button>
+    </div>
+    <div class="brow">
+      <button class="btn on" id="bPar" onclick="tog('parts','bPar')">PARTICULES</button>
+      <button class="btn on" id="bPla" onclick="tog('platform','bPla')">PLATEAU</button>
+      <button class="btn on" id="bSta" onclick="tog('stars','bSta')">ÉTOILES</button>
+    </div>
+    <div class="sr" style="margin-top:7px">
+      <span class="sl" style="min-width:42px">Atome</span>
+      <input type="range" id="sAtom" min=".2" max=".7" step=".05" value=".38"
+        oninput="atomSz=+this.value;document.getElementById('vAtom').textContent=(+this.value).toFixed(2)">
+      <span class="sv" id="vAtom">.38</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     RIGHT PANEL (desktop only)
+══════════════════════════════════════ -->
+<div class="pr">
+  <div class="card" style="animation-delay:.05s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g1);box-shadow:0 0 5px var(--g1)"></div>Observables</div>
+    <div class="mg">
+      <div class="met"><div class="ml">⟨|M|⟩/spin</div><div class="mv c1" id="vM">—</div></div>
+      <div class="met"><div class="ml">χ suscept.</div><div class="mv c2" id="vX">—</div></div>
+      <div class="met"><div class="ml">⟨E⟩/spin</div><div class="mv c3" id="vE">—</div></div>
+      <div class="met"><div class="ml">Cv</div><div class="mv c4" id="vC">—</div></div>
+    </div>
+  </div>
+  <div class="card" style="animation-delay:.08s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--em);box-shadow:0 0 5px var(--em)"></div>Chaîne de Markov M(t)</div>
+    <canvas class="ch2" id="cvM" height="80"></canvas>
+  </div>
+  <div class="card" style="animation-delay:.11s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g2);box-shadow:0 0 5px var(--g2)"></div>Thermodynamique</div>
+    <div class="ttabs">
+      <div class="ttab on" onclick="setTab('M',this)">M(T)</div>
+      <div class="ttab" onclick="setTab('chi',this)">χ(T)</div>
+      <div class="ttab" onclick="setTab('E',this)">E(T)</div>
+      <div class="ttab" onclick="setTab('Cv',this)">Cv(T)</div>
+    </div>
+    <canvas class="ch2" id="cvTh" height="90"></canvas>
+  </div>
+  <div class="card" style="animation-delay:.14s">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--gold);box-shadow:0 0 5px var(--gold)"></div>Domaines magnétiques</div>
+    <canvas class="ch2" id="cvDom" height="100"></canvas>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     BOTTOM BAR (desktop only)
+══════════════════════════════════════ -->
+<div class="pb">
+  <div class="pb-inner">
+    <div class="pb-sec">
+      <div class="ct" style="margin-bottom:4px"><div class="ctd" style="background:#60a5fa;box-shadow:0 0 4px #60a5fa"></div>Énergie E(t)</div>
+      <canvas class="ch2" id="cvE" style="height:84px"></canvas>
+    </div>
+    <div class="pb-sec">
+      <div class="ct" style="margin-bottom:4px"><div class="ctd" style="background:var(--em);box-shadow:0 0 4px var(--em)"></div>Distribution P(M)</div>
+      <canvas class="ch2" id="cvH" style="height:84px"></canvas>
+    </div>
+    <div class="pb-sec">
+      <div class="ct" style="margin-bottom:4px"><div class="ctd" style="background:var(--g3);box-shadow:0 0 4px var(--g3)"></div>Espace des phases M×E</div>
+      <canvas class="ch2" id="cvPh" style="height:84px"></canvas>
+    </div>
+    <div class="pb-sec">
+      <div class="ct" style="margin-bottom:4px"><div class="ctd" style="background:var(--gold);box-shadow:0 0 4px var(--gold)"></div>Hamiltonien</div>
+      <div class="hamil-eq">Ĥ = −J₁Σ⟨ij⟩sᵢsⱼ<br>&nbsp;&nbsp;− J₂Σ⟪ij⟫sᵢsⱼ<br>&nbsp;&nbsp;− hΣᵢsᵢ</div>
+      <div class="hamil-note">Pacc = min(1, e<sup>−ΔE/T</sup>)<br>s ∈ {−5/2,…,+5/2}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MOBILE TAB BAR
+══════════════════════════════════════ -->
+<div class="mob-tab-bar">
+  <button class="mob-tab active" onclick="mobTab(0,this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+    Physique
+    <div class="mob-tab-ind"></div>
+  </button>
+  <button class="mob-tab" onclick="mobTab(1,this)">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Markov
+    <div class="mob-tab-ind"></div>
+  </button>
+  <button class="mob-tab" onclick="mobTab(2,this)">
+    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><polyline points="7 16 11 12 15 15 19 9"/></svg>
+    Thermo
+    <div class="mob-tab-ind"></div>
+  </button>
+  <button class="mob-tab" onclick="mobTab(3,this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Domaines
+    <div class="mob-tab-ind"></div>
+  </button>
+  <button class="mob-tab" onclick="mobTab(4,this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    3D
+    <div class="mob-tab-ind"></div>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     MOBILE PANELS  (one per tab)
+══════════════════════════════════════ -->
+<!-- Tab 0: Physique -->
+<div class="mob-panel visible" id="mp0">
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g1)"></div>Paramètres</div>
+    <div class="sr"><span class="sl">T/J</span><input type="range" id="sTm" min=".1" max="8" step=".05" value="3" oninput="syncMob('sT','vT','vTm',this.value)"><span class="sv" id="vTm">3.00</span></div>
+    <div class="sr"><span class="sl">h</span><input type="range" id="sHm" min="-3" max="3" step=".1" value="0" oninput="syncMob('sH','vH','vHm',this.value)"><span class="sv" id="vHm">0.00</span></div>
+    <div class="sr"><span class="sl">L</span><input type="range" id="sLm" min="4" max="12" step="2" value="8" oninput="syncLmob(this.value)"><span class="sv" id="vLm">8</span></div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--em)"></div>Contrôle</div>
+    <div class="brow">
+      <button class="btn on" id="bRunM" onclick="toggleRun()">▶ RUN</button>
+      <button class="btn r" onclick="doReset()">RESET</button>
+      <button class="btn g" onclick="startScan()">SCAN T</button>
+    </div>
+    <div class="brow">
+      <button class="btn" onclick="setOrder()">ORDONNÉ</button>
+      <button class="btn" onclick="setRand()">ALÉATOIRE</button>
+      <button class="btn" onclick="toggleCinema()">CINÉMA</button>
+    </div>
+    <div class="cntrow">
+      <div class="cnt"><div class="cv2" id="cStepM">0</div><div class="cl2">Steps</div></div>
+      <div class="cnt"><div class="cv2" id="cAccM" style="color:var(--em)">—</div><div class="cl2">Accept</div></div>
+    </div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g1)"></div>Observables</div>
+    <div class="mg">
+      <div class="met"><div class="ml">⟨|M|⟩</div><div class="mv c1" id="vMm">—</div></div>
+      <div class="met"><div class="ml">χ</div><div class="mv c2" id="vXm">—</div></div>
+      <div class="met"><div class="ml">⟨E⟩</div><div class="mv c3" id="vEm">—</div></div>
+      <div class="met"><div class="ml">Cv</div><div class="mv c4" id="vCm">—</div></div>
+    </div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g2)"></div>Phase</div>
+    <div class="ppill"><div class="pdot" id="pdotM"></div><span id="ptxtM">—</span></div>
+  </div>
+</div>
+
+<!-- Tab 1: Markov -->
+<div class="mob-panel" id="mp1">
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--em)"></div>Chaîne de Markov M(t)</div>
+    <canvas class="ch2" id="cvMm" height="160"></canvas>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--gold)"></div>Metropolis</div>
+    <div class="mbox">
+      <div><span class="k">i    </span><span class="v" id="mIm">—</span></div>
+      <div><span class="k">sₒ   </span><span class="v" id="mOm">—</span></div>
+      <div><span class="k">s'   </span><span class="v" id="mNm">—</span></div>
+      <div><span class="k">Σ sⱼ </span><span class="v" id="mSm">—</span></div>
+    </div>
+    <div class="feq" id="mEqm">ΔE = —</div>
+    <div class="mbox"><div><span class="k">→ </span><span id="mRm">—</span></div></div>
+    <div class="jw"><div class="jf" id="jfm" style="width:0;color:var(--g1);background:currentColor"></div></div>
+  </div>
+</div>
+
+<!-- Tab 2: Thermo -->
+<div class="mob-panel" id="mp2">
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g2)"></div>Thermodynamique</div>
+    <div class="ttabs">
+      <div class="ttab on" onclick="setTab('M',this)">M(T)</div>
+      <div class="ttab" onclick="setTab('chi',this)">χ(T)</div>
+      <div class="ttab" onclick="setTab('E',this)">E(T)</div>
+      <div class="ttab" onclick="setTab('Cv',this)">Cv(T)</div>
+    </div>
+    <canvas class="ch2" id="cvThm" height="200"></canvas>
+    <div style="margin-top:8px" class="ibox" style="text-align:center;font-size:8px;color:var(--t3)">
+      → Lancer SCAN T pour tracer
+    </div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:#60a5fa"></div>Énergie E(t)</div>
+    <canvas class="ch2" id="cvEm" height="120"></canvas>
+  </div>
+</div>
+
+<!-- Tab 3: Domaines -->
+<div class="mob-panel" id="mp3">
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--gold)"></div>Domaines magnétiques</div>
+    <canvas class="ch2" id="cvDomm" height="260"></canvas>
+    <div style="margin-top:5px;font-family:'Space Mono',monospace;font-size:7px;color:var(--t3)">bleu=−5/2 → rouge=+5/2</div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g3)"></div>Distribution P(M)</div>
+    <canvas class="ch2" id="cvHm" height="120"></canvas>
+  </div>
+</div>
+
+<!-- Tab 4: 3D controls -->
+<div class="mob-panel" id="mp4">
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g3)"></div>Visuel 3D</div>
+    <div class="brow">
+      <button class="btn on" id="bArrM" onclick="tog('arrows','bArr','bArrM')">FLÈCHES</button>
+      <button class="btn on" id="bBonM" onclick="tog('bonds','bBon','bBonM')">LIAISONS</button>
+      <button class="btn on" id="bWavM" onclick="tog('waves','bWav','bWavM')">ONDES</button>
+    </div>
+    <div class="brow">
+      <button class="btn on" id="bParM" onclick="tog('parts','bPar','bParM')">PARTICULES</button>
+      <button class="btn on" id="bPlaM" onclick="tog('platform','bPla','bPlaM')">PLATEAU</button>
+      <button class="btn on" id="bStaM" onclick="tog('stars','bSta','bStaM')">ÉTOILES</button>
+    </div>
+    <div class="sr" style="margin-top:8px">
+      <span class="sl" style="min-width:40px">Atome</span>
+      <input type="range" id="sAtomM" min=".2" max=".7" step=".05" value=".38"
+        oninput="atomSz=+this.value;document.getElementById('vAtomM').textContent=(+this.value).toFixed(2)">
+      <span class="sv" id="vAtomM">.38</span>
+    </div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--gold)"></div>Hamiltonien</div>
+    <div class="hamil-eq">Ĥ = −J₁Σ⟨ij⟩sᵢsⱼ<br>&nbsp;&nbsp;− J₂Σ⟪ij⟫sᵢsⱼ<br>&nbsp;&nbsp;− hΣᵢsᵢ</div>
+    <div class="hamil-note">Pacc = min(1, e<sup>−ΔE/T</sup>)<br>s ∈ {−5/2, −3/2, −1/2, +1/2, +3/2, +5/2}</div>
+  </div>
+  <div class="card" style="animation:none">
+    <div class="gline"></div>
+    <div class="ct"><div class="ctd" style="background:var(--g3)"></div>Espace des phases</div>
+    <canvas class="ch2" id="cvPhm" height="160"></canvas>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MOBILE DRAWER UI
+══════════════════════════════════════ -->
+
+<!-- Floating status (always visible on mobile) -->
+<div id="mob-status">
+  <div class="mob-stat-pill">
+    <div class="mob-stat-dot"></div>
+    <span class="mob-stat-label">M</span>
+    <span class="mob-stat-value" id="mob-sv-m">—</span>
+    <span class="mob-stat-label" style="margin-left:8px">T</span>
+    <span class="mob-stat-value" id="mob-sv-t" style="color:var(--g2)">—</span>
+  </div>
+  <div class="mob-stat-pill">
+    <span class="mob-stat-label">Phase</span>
+    <span class="mob-stat-value" id="mob-sv-phase" style="font-size:9px">—</span>
+  </div>
+</div>
+
+<!-- Hamburger button -->
+<div id="mob-menu-btn" onclick="mobDrawerToggle()">
+  <svg id="mob-ico-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  <svg id="mob-ico-close" viewBox="0 0 24 24" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</div>
+
+<!-- Backdrop -->
+<div id="mob-backdrop" onclick="mobDrawerClose()"></div>
+
+<!-- Drawer -->
+<div id="mob-drawer">
+  <div id="mob-drawer-handle"></div>
+
+  <!-- Tab bar inside drawer -->
+  <div id="mob-drawer-tabs">
+    <button class="mob-dtab active" onclick="mobDTab(0,this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Physique
+    </button>
+    <button class="mob-dtab" onclick="mobDTab(1,this)">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Markov
+    </button>
+    <button class="mob-dtab" onclick="mobDTab(2,this)">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><polyline points="7 16 11 12 15 15 19 9"/></svg>
+      Thermo
+    </button>
+    <button class="mob-dtab" onclick="mobDTab(3,this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Domaines
+    </button>
+    <button class="mob-dtab" onclick="mobDTab(4,this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      3D
+    </button>
+  </div>
+
+  <!-- Drawer content -->
+  <div id="mob-drawer-content">
+
+    <!-- Panel 0: Physique -->
+    <div class="mob-dpanel active" id="mdp0">
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g1)"></div>Paramètres</div>
+        <div class="sr"><span class="sl">T/J</span><input type="range" id="sTm2" min=".1" max="8" step=".05" value="3" oninput="syncMob('sT','vT','vTm2',this.value)"><span class="sv" id="vTm2">3.00</span></div>
+        <div class="sr"><span class="sl">h</span><input type="range" id="sHm2" min="-3" max="3" step=".1" value="0" oninput="syncMob('sH','vH','vHm2',this.value)"><span class="sv" id="vHm2">0.00</span></div>
+        <div class="sr"><span class="sl">L</span><input type="range" id="sLm2" min="4" max="12" step="2" value="8" oninput="syncLmob(this.value);document.getElementById('sLm2').value=this.value"><span class="sv" id="vLm2">8</span></div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--em)"></div>Contrôle</div>
+        <div class="brow">
+          <button class="btn on" id="bRunD" onclick="toggleRun()">▶ RUN</button>
+          <button class="btn r" onclick="doReset()">RESET</button>
+          <button class="btn g" onclick="startScan()">SCAN T</button>
+        </div>
+        <div class="brow">
+          <button class="btn" onclick="setOrder()">ORDONNÉ</button>
+          <button class="btn" onclick="setRand()">ALÉATOIRE</button>
+          <button class="btn" onclick="toggleCinema()">CINÉMA</button>
+        </div>
+        <div class="cntrow">
+          <div class="cnt"><div class="cv2" id="cStepD">0</div><div class="cl2">Steps</div></div>
+          <div class="cnt"><div class="cv2" id="cAccD" style="color:var(--em)">—</div><div class="cl2">Accept</div></div>
+        </div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g1)"></div>Observables</div>
+        <div class="mg">
+          <div class="met"><div class="ml">⟨|M|⟩</div><div class="mv c1" id="vMd">—</div></div>
+          <div class="met"><div class="ml">χ</div><div class="mv c2" id="vXd">—</div></div>
+          <div class="met"><div class="ml">⟨E⟩</div><div class="mv c3" id="vEd">—</div></div>
+          <div class="met"><div class="ml">Cv</div><div class="mv c4" id="vCd">—</div></div>
+        </div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g2)"></div>Phase</div>
+        <div class="ppill"><div class="pdot" id="pdotD"></div><span id="ptxtD">—</span></div>
+        <div style="margin-top:8px" class="ibox">
+          Tc ≈ <span class="hl">~4.5 J</span><br>
+          ξ(T) = <span class="hl" id="xiValD">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 1: Markov -->
+    <div class="mob-dpanel" id="mdp1">
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--em)"></div>Chaîne de Markov M(t)</div>
+        <canvas class="ch2" id="cvMd" height="160"></canvas>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--gold)"></div>Metropolis</div>
+        <div class="mbox">
+          <div><span class="k">i    </span><span class="v" id="mId">—</span></div>
+          <div><span class="k">sₒ   </span><span class="v" id="mOd">—</span></div>
+          <div><span class="k">s'   </span><span class="v" id="mNd">—</span></div>
+          <div><span class="k">Σ sⱼ </span><span class="v" id="mSd">—</span></div>
+        </div>
+        <div class="feq" id="mEqd">ΔE = —</div>
+        <div class="mbox"><div><span class="k">→ </span><span id="mRd">—</span></div></div>
+        <div class="jw"><div class="jf" id="jfd" style="width:0;color:var(--g1);background:currentColor"></div></div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Thermo -->
+    <div class="mob-dpanel" id="mdp2">
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g2)"></div>Thermodynamique</div>
+        <div class="ttabs">
+          <div class="ttab on" onclick="setTab('M',this)">M(T)</div>
+          <div class="ttab" onclick="setTab('chi',this)">χ(T)</div>
+          <div class="ttab" onclick="setTab('E',this)">E(T)</div>
+          <div class="ttab" onclick="setTab('Cv',this)">Cv(T)</div>
+        </div>
+        <canvas class="ch2" id="cvThd" height="200"></canvas>
+        <div style="margin-top:8px;font-family:'Space Mono',monospace;font-size:8px;color:var(--t3)">→ Lancer SCAN T pour tracer</div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:#60a5fa"></div>Énergie E(t)</div>
+        <canvas class="ch2" id="cvEd" height="120"></canvas>
+      </div>
+    </div>
+
+    <!-- Panel 3: Domaines -->
+    <div class="mob-dpanel" id="mdp3">
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--gold)"></div>Domaines magnétiques</div>
+        <canvas class="ch2" id="cvDomd" height="260"></canvas>
+        <div style="margin-top:5px;font-family:'Space Mono',monospace;font-size:7px;color:var(--t3)">bleu=−5/2 → rouge=+5/2</div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g3)"></div>Distribution P(M)</div>
+        <canvas class="ch2" id="cvHd" height="120"></canvas>
+      </div>
+    </div>
+
+    <!-- Panel 4: 3D -->
+    <div class="mob-dpanel" id="mdp4">
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g3)"></div>Visuel 3D</div>
+        <div class="brow">
+          <button class="btn on" id="bArrD" onclick="tog('arrows','bArr','bArrD')">FLÈCHES</button>
+          <button class="btn on" id="bBonD" onclick="tog('bonds','bBon','bBonD')">LIAISONS</button>
+          <button class="btn on" id="bWavD" onclick="tog('waves','bWav','bWavD')">ONDES</button>
+        </div>
+        <div class="brow">
+          <button class="btn on" id="bParD" onclick="tog('parts','bPar','bParD')">PARTICULES</button>
+          <button class="btn on" id="bPlaD" onclick="tog('platform','bPla','bPlaD')">PLATEAU</button>
+          <button class="btn on" id="bStaD" onclick="tog('stars','bSta','bStaD')">ÉTOILES</button>
+        </div>
+        <div class="sr" style="margin-top:8px">
+          <span class="sl" style="min-width:40px">Atome</span>
+          <input type="range" id="sAtomD" min=".2" max=".7" step=".05" value=".38"
+            oninput="atomSz=+this.value;document.getElementById('vAtomD').textContent=(+this.value).toFixed(2)">
+          <span class="sv" id="vAtomD">.38</span>
+        </div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--gold)"></div>Hamiltonien</div>
+        <div class="hamil-eq">Ĥ = −J₁Σ⟨ij⟩sᵢsⱼ<br>&nbsp;&nbsp;− J₂Σ⟪ij⟫sᵢsⱼ<br>&nbsp;&nbsp;− hΣᵢsᵢ</div>
+        <div class="hamil-note">Pacc = min(1, e<sup>−ΔE/T</sup>)<br>s ∈ {−5/2, −3/2, −1/2, +1/2, +3/2, +5/2}</div>
+      </div>
+      <div class="card" style="animation:none">
+        <div class="gline"></div>
+        <div class="ct"><div class="ctd" style="background:var(--g3)"></div>Espace des phases</div>
+        <canvas class="ch2" id="cvPhd" height="160"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /mob-drawer-content -->
+</div><!-- /mob-drawer -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ══════════════════════════════════════════════
+   INTRO — luxe canvas 2D
+══════════════════════════════════════════════ */
+(function(){
+  const cv=document.getElementById('ic');
+  const ctx=cv.getContext('2d');
+  let W,H,t=0,raf,entered=false;
+  const resize=()=>{W=cv.width=innerWidth;H=cv.height=innerHeight};
+  resize();addEventListener('resize',resize);
+
+  const COLS=['#1e3a8a','#1d4ed8','#7dd3fc','#fda4af','#dc2626','#7f1d1d'];
+  const SPINS_V=[-2.5,-1.5,-0.5,0.5,1.5,2.5];
+  // Build hex node positions
+  const nodes=[];
+  const rows=9,cols=10;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) for(let s=0;s<2;s++){
+    const a=55; // spacing px
+    const x=W/2+(c-cols/2+r*.5)*a*1.732+(s?a*.866:0);
+    const y=H/2+(r-rows/2)*a*1.5+(s?a*.5:0);
+    const si=Math.floor(Math.random()*6);
+    nodes.push({x,y,si,born:Math.random()*80,phase:Math.random()*Math.PI*2,
+      px:x,py:y,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,
+      size:6+Math.random()*3,alpha:0});
+  }
+  // Pre-compute neighbour pairs
+  const pairs=[];
+  for(let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++){
+    const d=Math.hypot(nodes[i].x-nodes[j].x,nodes[i].y-nodes[j].y);
+    if(d<85)pairs.push([i,j,d]);
+  }
+
+  // Shooting stars
+  const stars=[];
+  function spawnStar(){
+    const angle=Math.random()*Math.PI*2;
+    stars.push({x:W/2+(Math.random()-.5)*W*.8,y:H/2+(Math.random()-.5)*H*.8,
+      vx:Math.cos(angle)*8,vy:Math.sin(angle)*8,life:0,maxLife:30+Math.random()*20});
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Deep space bg gradient
+    const bg=ctx.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);
+    bg.addColorStop(0,'rgba(10,16,36,.35)');
+    bg.addColorStop(.6,'rgba(5,8,16,.6)');
+    bg.addColorStop(1,'rgba(3,5,12,.85)');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+    // Shooting stars
+    if(t%40===0)spawnStar();
+    for(let i=stars.length-1;i>=0;i--){
+      const s=stars[i];s.life++;s.x+=s.vx;s.y+=s.vy;
+      const p=s.life/s.maxLife;
+      const len=30*p;
+      ctx.beginPath();
+      ctx.moveTo(s.x,s.y);
+      ctx.lineTo(s.x-s.vx*len/8,s.y-s.vy*len/8);
+      ctx.strokeStyle=`rgba(148,200,255,${(1-p)*.7})`;
+      ctx.lineWidth=1.5*(1-p);ctx.stroke();
+      if(s.life>=s.maxLife)stars.splice(i,1);
+    }
+
+    // Links
+    for(const [i,j,d] of pairs){
+      const ni=nodes[i],nj=nodes[j];
+      const prog=Math.min(ni.alpha,nj.alpha);if(prog<.05)continue;
+      const pulse=.5+.5*Math.sin(t*.04+ni.phase);
+      ctx.beginPath();ctx.moveTo(ni.px,ni.py);ctx.lineTo(nj.px,nj.py);
+      ctx.strokeStyle=`rgba(14,165,233,${prog*.12*pulse})`;
+      ctx.lineWidth=.8;ctx.stroke();
+    }
+
+    // Nodes
+    for(const nd of nodes){
+      const born=(t-nd.born)/35;nd.alpha=Math.max(0,Math.min(1,born));
+      if(nd.alpha<.02)continue;
+      const pulse=.85+.15*Math.sin(t*.07+nd.phase);
+      const col=COLS[nd.si];
+      // Outer aura
+      const r2=nd.size*2.5;
+      const aura=ctx.createRadialGradient(nd.px,nd.py,0,nd.px,nd.py,r2);
+      aura.addColorStop(0,col+'55');aura.addColorStop(1,col+'00');
+      ctx.beginPath();ctx.arc(nd.px,nd.py,r2,0,Math.PI*2);
+      ctx.fillStyle=aura;ctx.globalAlpha=nd.alpha*pulse;ctx.fill();
+      // Core sphere (gradient)
+      const g2=ctx.createRadialGradient(nd.px-nd.size*.3,nd.py-nd.size*.3,0,nd.px,nd.py,nd.size);
+      g2.addColorStop(0,'rgba(255,255,255,.45)');g2.addColorStop(.4,col);g2.addColorStop(1,col+'88');
+      ctx.beginPath();ctx.arc(nd.px,nd.py,nd.size,0,Math.PI*2);
+      ctx.fillStyle=g2;ctx.globalAlpha=nd.alpha;ctx.fill();
+      // Spin arrow
+      const sv=SPINS_V[nd.si],dir=sv>0?-1:1;
+      const arLen=nd.size*1.8;
+      const ax=nd.px,ay1=nd.py+dir*(nd.size+2),ay2=nd.py+dir*(nd.size+arLen);
+      ctx.beginPath();ctx.moveTo(ax,ay1);ctx.lineTo(ax,ay2);
+      ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=nd.alpha*.8;ctx.stroke();
+      // Arrowhead
+      const hd=4*nd.alpha;
+      ctx.beginPath();ctx.moveTo(ax,ay2);
+      ctx.lineTo(ax-hd,ay2-dir*hd*1.4);ctx.lineTo(ax+hd,ay2-dir*hd*1.4);
+      ctx.closePath();ctx.fillStyle=col;ctx.globalAlpha=nd.alpha*.8;ctx.fill();
+      ctx.globalAlpha=1;
+      // Value label
+      if(nd.size>7&&nd.alpha>.6){
+        ctx.fillStyle=`rgba(255,255,255,${nd.alpha*.75})`;
+        ctx.font=`700 ${nd.size*.85}px 'Space Mono',monospace`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(sv>0?'+'+sv:''+sv,nd.px,nd.py);
+      }
+      // Drift
+      nd.px+=nd.vx;nd.py+=nd.vy;
+    }
+
+    // Central gradient lens flare
+    const flare=ctx.createRadialGradient(W/2,H*.44,0,W/2,H*.44,Math.min(W,H)*.25);
+    flare.addColorStop(0,'rgba(14,165,233,.08)');
+    flare.addColorStop(.5,'rgba(129,140,248,.04)');
+    flare.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=flare;ctx.globalAlpha=1;ctx.fillRect(0,0,W,H);
+
+    // Rotating hex ring
+    ctx.save();ctx.translate(W/2,H/2);ctx.rotate(t*.002);
+    const ringR=Math.min(W,H)*.36;
+    for(let k=0;k<6;k++){
+      const a=k/6*Math.PI*2;
+      const rx=Math.cos(a)*ringR,ry=Math.sin(a)*ringR;
+      ctx.beginPath();ctx.arc(rx,ry,3,0,Math.PI*2);
+      ctx.fillStyle=`rgba(14,165,233,${.15+.1*Math.sin(t*.05+k)})`;ctx.fill();
+    }
+    for(let k=0;k<6;k++){
+      const a1=k/6*Math.PI*2,a2=(k+1)/6*Math.PI*2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a1)*ringR,Math.sin(a1)*ringR);
+      ctx.lineTo(Math.cos(a2)*ringR,Math.sin(a2)*ringR);
+      ctx.strokeStyle='rgba(14,165,233,.08)';ctx.lineWidth=1;ctx.stroke();
+    }
+    ctx.restore();
+
+    t++;raf=requestAnimationFrame(draw);
+  }
+  draw();
+
+  function enter(){
+    if(entered)return;entered=true;
+    const el=document.getElementById('intro');
+    el.classList.add('out');
+    cancelAnimationFrame(raf);
+    setTimeout(()=>{el.style.display='none';},700);
+  }
+  document.getElementById('intro').addEventListener('click',enter);
+  document.getElementById('intro').addEventListener('touchend',e=>{e.preventDefault();enter();},{passive:false});
+  setTimeout(enter,7000);
+})();
+
+/* ══════════════════════════════════════════════
+   PHYSICS
+══════════════════════════════════════════════ */
+const SPINS=[-2.5,-1.5,-0.5,0.5,1.5,2.5];
+const SCOLS=[0x1e3a8a,0x1d4ed8,0x7dd3fc,0xfda4af,0xdc2626,0x7f1d1d];
+const SCOLSS=['#1e3a8a','#1d4ed8','#7dd3fc','#fda4af','#dc2626','#7f1d1d'];
+const SEMIT=[0x93c5fd,0xbfdbfe,0xe0f2fe,0xfecdd3,0xfca5a5,0xfda4af];
+
+let L=8,N=0,lattice=[];
+let T=3,J2=0,h=0,running=true,simMode='auto',cinema=false,cinemaT=0;
+let stepCount=0,swSec=0,lastSec=performance.now();
+let mH=[],eH=[],aH=[],scanData=[],tTab='M';
+let lastM={i:0,o:0,n:0,s:'0',dE:'0',p:'1',ok:true};
+let atomSz=.38;
+let show={arrows:true,bonds:true,waves:true,parts:true,platform:true,stars:true};
+
+function initL(l){L=l;N=2*L*L;lattice=Array.from({length:N},()=>SPINS[Math.random()*6|0]);}
+function nb1(i){
+  const c=i>>1,s=i&1,r=(c/L)|0,col=c%L;
+  return s===0
+    ?[2*c+1,2*(r*L+((col+1)%L))+1,2*(((r-1+L)%L)*L+col)+1]
+    :[2*c,2*(r*L+((col-1+L)%L)),2*(((r+1)%L)*L+col)];
+}
+function nb2(i){
+  const c=i>>1,s=i&1,r=(c/L)|0,col=c%L;
+  return [[-1,0],[1,0],[0,-1],[0,1],[-1,1],[1,-1]]
+    .map(([dr,dc])=>2*(((r+dr+L)%L)*L+((col+dc+L)%L))+s);
+}
+function lf(i){
+  let f=0;for(const j of nb1(i))f+=lattice[j];
+  if(J2)for(const j of nb2(i))f+=J2*lattice[j];
+  return f+h;
+}
+function sweep(){
+  let acc=0;
+  for(let k=0;k<N;k++){
+    const i=Math.random()*N|0,o=lattice[i],n=SPINS[Math.random()*6|0];
+    if(n===o)continue;
+    const f=lf(i),dE=-(n-o)*f,p=dE<=0?1:Math.exp(-dE/T),ok=Math.random()<p;
+    if(ok){lattice[i]=n;acc++;}
+    if(k===0)lastM={i,o,n,s:(f-h).toFixed(2),dE:dE.toFixed(3),p:Math.min(1,p).toFixed(4),ok};
+  }
+  return acc/N;
+}
+function totalM(){return lattice.reduce((a,b)=>a+b,0)/N;}
+function totalE(){
+  let e=0;
+  for(let i=0;i<N;i++){
+    let f=0;for(const j of nb1(i))f+=lattice[j];
+    if(J2)for(const j of nb2(i))f+=J2*lattice[j];
+    e-=lattice[i]*f;
+  }
+  return e/(2*N)-h*totalM();
+}
+function calcObs(){
+  const n=Math.min(mH.length,400);if(!n)return{M:0,chi:0,E:0,Cv:0};
+  const ms=mH.slice(-n),es=eH.slice(-n);
+  let sm=0,sm2=0,se=0,se2=0;
+  for(const v of ms){sm+=Math.abs(v);sm2+=v*v;}
+  for(const v of es){se+=v;se2+=v*v;}
+  const am=sm/n,am2=sm2/n,ae=se/n,ae2=se2/n;
+  return{M:am,chi:N*(am2-am*am)/T,E:ae,Cv:(ae2-ae*ae)/(T*T)};
+}
+
+/* ══════════════════════════════════════════════
+   THREE.JS
+══════════════════════════════════════════════ */
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('bg'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x050810,1);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x050810,.013);
+
+const cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,500);
+cam.position.set(0,16,28);cam.lookAt(0,0,0);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x0c1628,5));
+const sun=new THREE.DirectionalLight(0x38bdf8,3);
+sun.position.set(15,25,10);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+scene.add(sun);
+const fill=new THREE.DirectionalLight(0x818cf8,2);fill.position.set(-15,8,-12);scene.add(fill);
+const rim=new THREE.PointLight(0xf472b6,3,70);rim.position.set(0,-6,14);scene.add(rim);
+const topL=new THREE.PointLight(0xfbbf24,1.5,55);topL.position.set(-12,14,-8);scene.add(topL);
+const botL=new THREE.PointLight(0x0ea5e9,2,45);botL.position.set(0,-10,0);scene.add(botL);
+
+// Cam control
+let drag=false,pm={x:0,y:0},rotY=.4,rotX=.3,dist=28,autoRot=true;
+const cv3=renderer.domElement;
+function startDrag(x,y){drag=true;pm={x,y};autoRot=false;cinema=false;}
+function moveDrag(x,y){
+  if(!drag)return;
+  rotY+=(x-pm.x)*.007;
+  rotX=Math.max(-1.2,Math.min(1.2,rotX+(y-pm.y)*.007));
+  pm={x,y};
+}
+cv3.addEventListener('mousedown',e=>startDrag(e.clientX,e.clientY));
+cv3.addEventListener('touchstart',e=>startDrag(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('touchend',()=>drag=false);
+addEventListener('mousemove',e=>moveDrag(e.clientX,e.clientY));
+addEventListener('touchmove',e=>moveDrag(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+cv3.addEventListener('wheel',e=>{dist=Math.max(8,Math.min(60,dist+e.deltaY*.04));},{passive:true});
+
+const gAtom=new THREE.Group(),gBond=new THREE.Group(),gArr=new THREE.Group();
+const gWave=new THREE.Group(),gPart=new THREE.Group(),gPlat=new THREE.Group(),gDeco=new THREE.Group();
+[gPlat,gDeco,gBond,gAtom,gArr,gWave,gPart].forEach(g=>scene.add(g));
+
+const sphG=new THREE.SphereGeometry(1,22,16);
+const cylG=new THREE.CylinderGeometry(.04,.04,1,8);
+const cylG2=new THREE.CylinderGeometry(.015,.015,1,6);
+
+let atomM=[],atomP=[],arrowO=[],waves=[];
+
+function hexP(i){
+  const c=i>>1,s=i&1,r=(c/L)|0,col=c%L,a=1.38;
+  return new THREE.Vector3((col+r*.5)*a*1.732+(s?a*.866:0),0,r*a*1.5+(s?a*.5:0));
+}
+function cOff(){
+  let sx=0,sz=0;for(let i=0;i<N;i++){const p=hexP(i);sx+=p.x;sz+=p.z;}
+  return new THREE.Vector3(-sx/N,0,-sz/N);
+}
+function spawnWave(pos,col){
+  if(!show.waves)return;
+  const m=new THREE.Mesh(new THREE.TorusGeometry(.5,.03,8,30),
+    new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.85}));
+  m.position.copy(pos);m.rotation.x=Math.PI/2;
+  gWave.add(m);waves.push({m,t:0});
+}
+function updWaves(){
+  for(let i=waves.length-1;i>=0;i--){
+    const w=waves[i];w.t++;const p=w.t/55;
+    w.m.scale.setScalar(1+p*9);w.m.material.opacity=.85*(1-p)*(1-p);
+    if(w.t>=55){gWave.remove(w.m);waves.splice(i,1);}
+  }
+}
+let pSys=null,pVels=[];
+function buildParts(){
+  gPart.clear();pSys=null;pVels=[];if(!show.parts)return;
+  const n=180,off=cOff(),geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(n*3),col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const ax=Math.random()*N|0,p=hexP(ax).add(off);
+    pos[i*3]=p.x+(Math.random()-.5)*5;pos[i*3+1]=(Math.random()-.5)*2.5;pos[i*3+2]=p.z+(Math.random()-.5)*5;
+    const c=new THREE.Color(SCOLSS[Math.floor(Math.random()*6)]);
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+    pVels.push(new THREE.Vector3((Math.random()-.5)*.025,(Math.random()-.5)*.008,(Math.random()-.5)*.025));
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  pSys=new THREE.Points(geo,new THREE.PointsMaterial({size:.11,vertexColors:true,transparent:true,opacity:.65}));
+  gPart.add(pSys);
+}
+function updParts(){
+  if(!pSys||!show.parts)return;
+  const pos=pSys.geometry.attributes.position,off=cOff(),bnd=L*2.8;
+  for(let i=0;i<pos.count;i++){
+    pos.array[i*3]+=pVels[i].x;pos.array[i*3+1]+=pVels[i].y;pos.array[i*3+2]+=pVels[i].z;
+    if(Math.abs(pos.array[i*3]-off.x)>bnd)pVels[i].x*=-1;
+    if(Math.abs(pos.array[i*3+1])>1.8)pVels[i].y*=-1;
+    if(Math.abs(pos.array[i*3+2]-off.z)>bnd)pVels[i].z*=-1;
+  }
+  pos.needsUpdate=true;
+}
+function buildStars(){
+  gDeco.clear();if(!show.stars)return;
+  const n=350,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3);
+  for(let i=0;i<n;i++){pos[i*3]=(Math.random()-.5)*250;pos[i*3+1]=(Math.random()-.5)*200;pos[i*3+2]=(Math.random()-.5)*250;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  gDeco.add(new THREE.Points(geo,new THREE.PointsMaterial({size:.28,color:0x4a6fa5,transparent:true,opacity:.35})));
+}
+function buildPlat(off){
+  gPlat.clear();if(!show.platform)return;
+  const s=6,R=L*2.1,shape=new THREE.Shape();
+  for(let k=0;k<=s;k++){const a=k/s*Math.PI*2-Math.PI/6;k===0?shape.moveTo(R*Math.cos(a),R*Math.sin(a)):shape.lineTo(R*Math.cos(a),R*Math.sin(a));}
+  const fl=new THREE.Mesh(new THREE.ShapeGeometry(shape),
+    new THREE.MeshBasicMaterial({color:0x0d1a30,transparent:true,opacity:.75,side:THREE.DoubleSide}));
+  fl.rotation.x=-Math.PI/2;fl.position.set(off.x,-.65,off.z);gPlat.add(fl);
+  const lm=new THREE.LineBasicMaterial({color:0x0ea5e9,transparent:true,opacity:.07});
+  for(let i=0;i<N;i++) for(const j of nb1(i)) if(j>i){
+    const p1=hexP(i).add(off).clone().setY(-.6),p2=hexP(j).add(off).clone().setY(-.6);
+    gPlat.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1,p2]),lm));
+  }
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(R*.93,.025,8,s*4),
+    new THREE.MeshBasicMaterial({color:0x0ea5e9,transparent:true,opacity:.12}));
+  ring.rotation.x=Math.PI/2;ring.position.set(off.x,-.62,off.z);gPlat.add(ring);
+}
+function buildScene(){
+  gAtom.clear();gBond.clear();gArr.clear();gWave.clear();
+  atomM=[];atomP=[];arrowO=[];waves=[];
+  const off=cOff();
+  for(let i=0;i<N;i++){
+    const p=hexP(i).add(off);atomP.push(p.clone());
+    const ci=SPINS.indexOf(lattice[i]);
+    const mat=new THREE.MeshPhysicalMaterial({color:SCOLS[ci],emissive:SCOLS[ci],
+      emissiveIntensity:.28,metalness:.18,roughness:.32,clearcoat:.35,clearcoatRoughness:.15});
+    const m=new THREE.Mesh(sphG,mat);
+    m.scale.setScalar(atomSz);m.position.copy(p);m.castShadow=true;m.receiveShadow=true;
+    gAtom.add(m);atomM.push(m);
+  }
+  if(show.bonds){
+    const bm=new THREE.MeshPhongMaterial({color:0x1e3a5f,transparent:true,opacity:.3,shininess:20});
+    for(let i=0;i<N;i++) for(const j of nb1(i)) if(j>i){
+      const p1=atomP[i],p2=atomP[j],mid=p1.clone().add(p2).multiplyScalar(.5),len=p1.distanceTo(p2);
+      const m=new THREE.Mesh(cylG,bm.clone());
+      m.position.copy(mid);m.scale.y=len;
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p2.clone().sub(p1).normalize());
+      gBond.add(m);
+    }
+  }
+  if(J2&&show.bonds){
+    const bm2=new THREE.MeshPhongMaterial({color:0x4a1d8f,transparent:true,opacity:.12});
+    for(let i=0;i<N;i++) for(const j of nb2(i)) if(j>i){
+      const p1=atomP[i],p2=atomP[j],mid=p1.clone().add(p2).multiplyScalar(.5),len=p1.distanceTo(p2);
+      const m=new THREE.Mesh(cylG2,bm2.clone());
+      m.position.copy(mid);m.scale.y=len;
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p2.clone().sub(p1).normalize());
+      gBond.add(m);
+    }
+  }
+  if(show.arrows){
+    for(let i=0;i<N;i++){
+      const si=lattice[i],ci=SPINS.indexOf(si),dir=new THREE.Vector3(0,si>0?1:-1,0),len=Math.abs(si)*.28;
+      const ori=atomP[i].clone().add(new THREE.Vector3(0,(si>0?1:-1)*(atomSz+.05),0));
+      const a=new THREE.ArrowHelper(dir,ori,len,SEMIT[ci],len*.45,len*.3);
+      gArr.add(a);arrowO.push(a);
+    }
+  }
+  buildPlat(off);buildParts();
+}
+function updAtoms(){
+  for(let i=0;i<N;i++){
+    const si=lattice[i],ci=SPINS.indexOf(si);
+    atomM[i].material.color.set(SCOLS[ci]);
+    atomM[i].material.emissive.set(SCOLS[ci]);
+    atomM[i].material.emissiveIntensity=.28;
+    atomM[i].scale.setScalar(atomSz);
+    if(show.arrows&&arrowO[i]){
+      const dir=new THREE.Vector3(0,si>0?1:-1,0),len=Math.abs(si)*.28;
+      arrowO[i].setDirection(dir);arrowO[i].setLength(len,len*.45,len*.3);
+      arrowO[i].position.copy(atomP[i].clone().add(new THREE.Vector3(0,(si>0?1:-1)*(atomSz+.05),0)));
+      arrowO[i].setColor(new THREE.Color(SEMIT[ci]));
+    }
+  }
+}
+function pulseAtom(i,ok){
+  if(!atomM[i])return;
+  const col=ok?0x34d399:0xf87171;
+  atomM[i].material.emissive.set(col);atomM[i].material.emissiveIntensity=3;
+  atomM[i].scale.setScalar(atomSz*1.7);spawnWave(atomP[i],col);
+  for(const j of nb1(i))if(atomM[j]){atomM[j].material.emissiveIntensity=1.2;atomM[j].scale.setScalar(atomSz*1.15);}
+  setTimeout(()=>{
+    if(!atomM[i])return;
+    const ci=SPINS.indexOf(lattice[i]);
+    atomM[i].material.emissive.set(SCOLS[ci]);atomM[i].material.emissiveIntensity=.28;atomM[i].scale.setScalar(atomSz);
+    for(const j of nb1(i))if(atomM[j]){atomM[j].material.emissive.set(SCOLS[SPINS.indexOf(lattice[j])]);atomM[j].material.emissiveIntensity=.28;atomM[j].scale.setScalar(atomSz);}
+  },220);
+}
+function tog(k,...ids){
+  show[k]=!show[k];
+  ids.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.toggle('on',show[k]);});
+  const map={arrows:gArr,bonds:gBond,waves:gWave,parts:gPart,platform:gPlat,stars:gDeco};
+  if(map[k])map[k].visible=show[k];
+}
+function toggleCinema(){cinema=!cinema;autoRot=cinema;document.getElementById('bCin').classList.toggle('on',cinema);}
+
+/* ══════════════════════════════════════════════
+   2D CHARTS
+══════════════════════════════════════════════ */
+function initCV(id){
+  const cv=document.getElementById(id);if(!cv||!cv.offsetWidth)return null;
+  const dpr=devicePixelRatio||1;
+  cv.width=cv.offsetWidth*dpr;cv.height=cv.offsetHeight*dpr;
+  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
+  return{ctx,W:cv.offsetWidth,H:cv.offsetHeight};
+}
+function gridL(ctx,W,H,p=6){
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;
+  [.25,.5,.75].forEach(f=>{ctx.beginPath();ctx.moveTo(p,p+f*(H-2*p));ctx.lineTo(W-p,p+f*(H-2*p));ctx.stroke();});
+}
+function line2d(ctx,data,W,H,col,p=6){
+  if(data.length<2)return;
+  const n=data.length,vn=Math.min(...data),vx=Math.max(...data);
+  const sx=i=>(i/(n-1))*(W-2*p)+p,sy=v=>H-p-(v-vn)/(vx-vn||.01)*(H-2*p);
+  ctx.shadowColor=col;ctx.shadowBlur=8;
+  ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.lineJoin='round';
+  data.forEach((v,i)=>i?ctx.lineTo(sx(i),sy(v)):ctx.moveTo(sx(i),sy(v)));
+  ctx.stroke();ctx.shadowBlur=0;
+  const grd=ctx.createLinearGradient(0,p,0,H);
+  const hex2r=c=>{const n2=parseInt(c.replace('#',''),16);return`${(n2>>16)&255},${(n2>>8)&255},${n2&255}`};
+  const rgb=col.startsWith('#')?hex2r(col):'56,189,248';
+  grd.addColorStop(0,`rgba(${rgb},.18)`);grd.addColorStop(1,`rgba(${rgb},0)`);
+  ctx.beginPath();data.forEach((v,i)=>i?ctx.lineTo(sx(i),sy(v)):ctx.moveTo(sx(i),sy(v)));
+  ctx.lineTo(sx(n-1),H-p);ctx.lineTo(p,H-p);ctx.closePath();ctx.fillStyle=grd;ctx.fill();
+}
+function drawChart(id,data,col){const r=initCV(id);if(!r)return;const{ctx,W,H}=r;ctx.clearRect(0,0,W,H);gridL(ctx,W,H);if(data.length>1)line2d(ctx,data.slice(-400),W,H,col);}
+function drawHistC(id){
+  const r=initCV(id);if(!r)return;const{ctx,W,H}=r;ctx.clearRect(0,0,W,H);
+  if(mH.length<10)return;
+  const bins=22,data2=new Array(bins).fill(0),mn=Math.min(...mH),mx=Math.max(...mH);
+  for(const v of mH){const b=Math.min(bins-1,(v-mn)/(mx-mn||1)*bins|0);data2[b]++;}
+  const mxB=Math.max(...data2),bw=(W-12)/bins;
+  data2.forEach((c,i)=>{
+    const bh=(c/mxB)*(H-12),x=6+i*bw,y=H-6-bh;
+    const grd=ctx.createLinearGradient(0,y,0,H-6);
+    grd.addColorStop(0,'rgba(52,211,153,.75)');grd.addColorStop(1,'rgba(52,211,153,.1)');
+    ctx.shadowColor='#34d399';ctx.shadowBlur=4;ctx.fillStyle=grd;ctx.fillRect(x+.5,y,bw-1,bh);
+  });ctx.shadowBlur=0;
+}
+function drawThermoC(id){
+  const r=initCV(id);if(!r)return;const{ctx,W,H}=r;ctx.clearRect(0,0,W,H);gridL(ctx,W,H);
+  if(!scanData.length){ctx.fillStyle='rgba(255,255,255,.12)';ctx.font='7px Space Mono';ctx.textAlign='center';ctx.fillText('→ SCAN T pour tracer',W/2,H/2);return;}
+  const vals=scanData.map(d=>d[tTab]),Ts=scanData.map(d=>d.T);
+  const Tn=Ts[0],Tx=Ts[Ts.length-1],vn=Math.min(...vals),vx=Math.max(...vals);
+  const sx=t=>6+(t-Tn)/(Tx-Tn)*(W-12),sy=v=>H-6-(v-vn)/(vx-vn||.01)*(H-12);
+  const col={'M':'#38bdf8','chi':'#fb923c','E':'#60a5fa','Cv':'#34d399'}[tTab];
+  line2d(ctx,vals,W,H,col);
+  Ts.forEach((t,i)=>{ctx.beginPath();ctx.arc(sx(t),sy(vals[i]),3,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=5;ctx.fill();ctx.shadowBlur=0;});
+  const Tc=4.5;ctx.strokeStyle='rgba(251,191,36,.35)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(sx(Tc),6);ctx.lineTo(sx(Tc),H-6);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(251,191,36,.6)';ctx.font='7px Space Mono';ctx.textAlign='left';ctx.fillText('Tc',sx(Tc)+2,12);
+}
+function drawDomC(id){
+  const cv=document.getElementById(id);if(!cv||!cv.offsetWidth)return;
+  const dpr=devicePixelRatio||1;cv.width=cv.offsetWidth*dpr;cv.height=cv.offsetHeight*dpr;
+  const ctx=cv.getContext('2d'),W=cv.offsetWidth,H=cv.offsetHeight;
+  if(!lattice.length)return;
+  const rh=Math.min(W/(L*1.732*1.05),H/(L*1.55));
+  const ox=W/2-L*rh*1.732/2,oy=H/2-L*rh*.75;
+  for(let i=0;i<N;i++){
+    const c=i>>1,s=i&1,r=(c/L)|0,col=c%L;
+    const cx2=ox+(col+r*.5)*rh*1.732+(s?rh*.866:0),cy2=oy+(r*1.5+(s?.5:0))*rh;
+    const ci=SPINS.indexOf(lattice[i]);
+    ctx.save();ctx.scale(dpr,dpr);
+    ctx.beginPath();
+    for(let k=0;k<6;k++){const a=k/6*Math.PI*2-Math.PI/6;
+      k===0?ctx.moveTo(cx2+rh*.43*Math.cos(a),cy2+rh*.43*Math.sin(a))
+           :ctx.lineTo(cx2+rh*.43*Math.cos(a),cy2+rh*.43*Math.sin(a));}
+    ctx.closePath();ctx.fillStyle=SCOLSS[ci]+'aa';ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.22)';ctx.lineWidth=.5;ctx.stroke();
+    if(rh>9){
+      const sv=SPINS[ci];ctx.fillStyle='rgba(255,255,255,.8)';
+      ctx.font=`700 ${Math.max(6,rh*.34)}px Space Mono`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(sv>0?'+'+sv:''+sv,cx2,cy2);
+    }
+    ctx.restore();
+  }
+}
+function drawPhaseC(id){
+  const r=initCV(id);if(!r)return;const{ctx,W,H}=r;ctx.clearRect(0,0,W,H);
+  if(mH.length<5)return;
+  const ms=mH.slice(-200),es=eH.slice(-200),n=ms.length;
+  const mn=Math.min(...ms),mx=Math.max(...ms),en=Math.min(...es),ex=Math.max(...es);
+  const sx=v=>6+(v-mn)/(mx-mn||.01)*(W-12),sy=v=>H-6-(v-en)/(ex-en||.01)*(H-12);
+  for(let i=0;i<n;i++){
+    ctx.beginPath();ctx.arc(sx(ms[i]),sy(es[i]),1.4,0,Math.PI*2);
+    ctx.fillStyle=`hsla(${i/n*260},75%,65%,${.15+.6*(i/n)})`;ctx.fill();
+  }
+  ctx.fillStyle='rgba(255,255,255,.18)';ctx.font='7px Space Mono';
+  ctx.textAlign='center';ctx.fillText('Espace de phases M×E',W/2,H-2);
+}
+
+function drawAll(){
+  // desktop
+  drawChart('cvM',mH.slice(-400),'#34d399');
+  drawChart('cvE',eH.slice(-400),'#60a5fa');
+  drawHistC('cvH');drawThermoC('cvTh');drawDomC('cvDom');drawPhaseC('cvPh');
+  // mobile
+  drawChart('cvMm',mH.slice(-400),'#34d399');
+  drawChart('cvEm',eH.slice(-400),'#60a5fa');
+  drawHistC('cvHm');drawThermoC('cvThm');drawDomC('cvDomm');drawPhaseC('cvPhm');
+}
+
+/* ══════════════════════════════════════════════
+   UI
+══════════════════════════════════════════════ */
+function buildLeg(){
+  const el=document.getElementById('sleg');if(!el)return;el.innerHTML='';
+  SPINS.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='sld';
+    d.style.background=SCOLSS[i];d.textContent=s>0?'+'+s:''+s;el.appendChild(d);
+  });
+}
+function $set(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+function syncMob(desktopId,desktopLabel,mobLabel,val){
+  const el=document.getElementById(desktopId);if(el)el.value=val;
+  $set(desktopLabel,parseFloat(val).toFixed(2));
+  $set(mobLabel,parseFloat(val).toFixed(2));
+  // also sync drawer sliders labels
+  if(desktopId==='sT'){$set('vTm2',parseFloat(val).toFixed(2));const e2=document.getElementById('sTm2');if(e2)e2.value=val;}
+  if(desktopId==='sH'){$set('vHm2',parseFloat(val).toFixed(2));const e2=document.getElementById('sHm2');if(e2)e2.value=val;}
+  updSliders();
+}
+function syncLmob(val){
+  const el=document.getElementById('sL');if(el)el.value=val;
+  $set('vL',val);$set('vLm',val);$set('vLm2',val);
+  updSliders();initL(L);buildScene();mH=[];eH=[];aH=[];stepCount=0;$set('nVal',N);
+}
+function updSliders(){
+  T=parseFloat(document.getElementById('sT').value);
+  J2=parseFloat(document.getElementById('sJ2').value);
+  h=parseFloat(document.getElementById('sH').value);
+  L=parseInt(document.getElementById('sL').value);
+  $set('vT',T.toFixed(2));$set('vJ2',J2.toFixed(2));$set('vH',h.toFixed(2));$set('vL',L);
+}
+['sT','sJ2','sH'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('input',updSliders);});
+document.getElementById('sL').addEventListener('input',()=>{
+  updSliders();initL(L);buildScene();mH=[];eH=[];aH=[];stepCount=0;$set('nVal',N);
+});
+
+function updMetro(){
+  const m=lastM;
+  ['mI','mIm','mId'].forEach(id=>$set(id,m.i));
+  ['mO','mOm','mOd'].forEach(id=>$set(id,(m.o>0?'+':'')+m.o));
+  ['mN','mNm','mNd'].forEach(id=>$set(id,(m.n>0?'+':'')+m.n));
+  ['mS','mSm','mSd'].forEach(id=>$set(id,m.s));
+  const eq=`ΔE = −(${m.n>0?'+':''}${m.n}−${m.o>0?'+':''}${m.o})·${m.s} = ${m.dE}`;
+  $set('mEq',eq);$set('mEqm',eq);$set('mEqd',eq);
+  ['mP'].forEach(id=>$set(id,m.p));
+  const rtxt=m.ok?'✓ ACCEPTÉ':'✗ REJETÉ',rcls=m.ok?'ok':'no';
+  ['mR','mRm','mRd'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=rtxt;e.className=rcls;}});
+  const pct=parseFloat(m.p)*100,col=m.ok?'#34d399':'#f87171';
+  ['jf','jfm','jfd'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.width=pct+'%';e.style.color=col;e.style.background=col;}});
+}
+function updPhase(){
+  const Tc=4.5;let phase,col;
+  if(T<Tc*.7){phase='FERROMAGNÉTIQUE';col='#ef4444';}
+  else if(T<Tc*1.2){phase='CRITIQUE ≈ Tc';col='#fbbf24';}
+  else{phase='PARAMAGNÉTIQUE';col='#60a5fa';}
+  ['pdot','pdotM','pdotD'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.cssText=`background:${col};box-shadow:0 0 9px ${col}`;});
+  ['ptxt','ptxtM','ptxtD'].forEach(id=>$set(id,phase));
+  $set('hPhase',phase);
+  $set('xiVal',T>Tc?`${(1/(T-Tc+.01)).toFixed(2)}`:'→ ∞');
+  $set('xiValD',T>Tc?`${(1/(T-Tc+.01)).toFixed(2)}`:'→ ∞');
+  $set('mob-sv-phase',phase);
+}
+function updObs(){
+  const o=calcObs();
+  $set('vM',o.M.toFixed(4));$set('vX',o.chi.toFixed(3));$set('vE',o.E.toFixed(4));$set('vC',o.Cv.toFixed(3));
+  $set('vMm',o.M.toFixed(3));$set('vXm',o.chi.toFixed(2));$set('vEm',o.E.toFixed(3));$set('vCm',o.Cv.toFixed(2));
+  $set('vMd',o.M.toFixed(3));$set('vXd',o.chi.toFixed(2));$set('vEd',o.E.toFixed(3));$set('vCd',o.Cv.toFixed(2));
+  $set('mob-sv-m',o.M.toFixed(3));
+  $set('mob-sv-t',T.toFixed(2));
+}
+function updCounts(acc){
+  const s=stepCount.toLocaleString('fr'),a=(acc*100).toFixed(0)+'%';
+  ['cStep','cStepM','cStepD'].forEach(id=>$set(id,s));
+  ['cAcc','cAccM','cAccD'].forEach(id=>$set(id,a));
+  $set('hSteps',s+' steps');
+  const on=running;
+  ['bRun','bRunM','bRunD'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=on?'⏸ PAUSE':'▶ RUN';e.classList.toggle('on',on);}});
+}
+
+function toggleRun(){
+  running=!running;$set('hLive',running?'EN COURS':'PAUSÉ');
+  ['bRun','bRunM','bRunD'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=running?'⏸ PAUSE':'▶ RUN';e.classList.toggle('on',running);}});
+}
+function doReset(){initL(L);buildScene();mH=[];eH=[];aH=[];scanData=[];stepCount=0;drawAll();}
+function setOrder(){for(let i=0;i<N;i++)lattice[i]=2.5;updAtoms();}
+function setRand(){for(let i=0;i<N;i++)lattice[i]=SPINS[Math.random()*6|0];updAtoms();}
+function setMode(m,el){simMode=m;document.querySelectorAll('.mchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function setTab(t,el){tTab=t;document.querySelectorAll('.ttab').forEach(e=>e.classList.remove('on'));el.classList.add('on');drawThermoC('cvTh');drawThermoC('cvThm');drawThermoC('cvThd');}
+
+async function startScan(){
+  const was=running;running=false;
+  scanData=[];
+  const Ts=[.3,.6,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,7,8];
+  for(const Tv of Ts){
+    T=Tv;const e=document.getElementById('sT');if(e)e.value=T;$set('vT',T.toFixed(2));
+    initL(L);for(let s=0;s<600;s++)sweep();
+    let sm=0,sm2=0,se=0,se2=0;
+    for(let s=0;s<800;s++){sweep();const m2=Math.abs(totalM()),e2=totalE();sm+=m2;sm2+=m2*m2;se+=e2;se2+=e2*e2;}
+    const am=sm/800,am2=sm2/800,ae=se/800,ae2=se2/800;
+    scanData.push({T:Tv,M:am,chi:N*(am2-am*am)/Tv,E:ae,Cv:(ae2-ae*ae)/(Tv*Tv)});
+    drawThermoC('cvTh');drawThermoC('cvThm');drawThermoC('cvThd');await new Promise(r=>setTimeout(r,0));
+  }
+  T=parseFloat(document.getElementById('sT').value);running=was;
+}
+
+// Mobile drawer logic
+let curDTab=0;
+function mobDTab(idx,el){
+  document.querySelectorAll('.mob-dtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.mob-dpanel').forEach(p=>p.classList.remove('active'));
+  const panel=document.getElementById('mdp'+idx);if(panel)panel.classList.add('active');
+  curDTab=idx;
+  setTimeout(()=>{
+    if(idx===1){drawChart('cvMd',mH.slice(-400),'#34d399');}
+    if(idx===2){drawThermoC('cvThd');drawChart('cvEd',eH.slice(-400),'#60a5fa');}
+    if(idx===3){drawDomC('cvDomd');drawHistC('cvHd');}
+    if(idx===4){drawPhaseC('cvPhd');}
+  },50);
+}
+
+let drawerOpen=false;
+function mobDrawerToggle(){drawerOpen?mobDrawerClose():mobDrawerOpen();}
+function mobDrawerOpen(){
+  drawerOpen=true;
+  document.getElementById('mob-drawer').classList.add('open');
+  document.getElementById('mob-backdrop').classList.add('open');
+  document.getElementById('mob-ico-menu').style.display='none';
+  document.getElementById('mob-ico-close').style.display='block';
+  setTimeout(()=>{
+    if(curDTab===1)drawChart('cvMd',mH.slice(-400),'#34d399');
+    if(curDTab===2){drawThermoC('cvThd');drawChart('cvEd',eH.slice(-400),'#60a5fa');}
+    if(curDTab===3){drawDomC('cvDomd');drawHistC('cvHd');}
+    if(curDTab===4)drawPhaseC('cvPhd');
+  },100);
+}
+function mobDrawerClose(){
+  drawerOpen=false;
+  document.getElementById('mob-drawer').classList.remove('open');
+  document.getElementById('mob-backdrop').classList.remove('open');
+  document.getElementById('mob-ico-menu').style.display='block';
+  document.getElementById('mob-ico-close').style.display='none';
+}
+
+// Swipe down to close drawer
+(function(){
+  let startY=0;
+  const dr=document.getElementById('mob-drawer');
+  dr.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;},{passive:true});
+  dr.addEventListener('touchend',e=>{
+    if(e.changedTouches[0].clientY-startY>60)mobDrawerClose();
+  },{passive:true});
+})();
+
+// Legacy mobTab kept for backward compat (old panels hidden)
+let curMobTab=0;
+function mobTab(idx,el){curMobTab=idx;}
+
+/* ══════════════════════════════════════════════
+   RENDER LOOP
+══════════════════════════════════════════════ */
+let frame=0,lastDraw=0,fpsC=0,lastFPS=performance.now();
+
+function loop(t){
+  requestAnimationFrame(loop);frame++;fpsC++;
+  if(t-lastFPS>1000){$set('hFPS',fpsC+' fps');fpsC=0;lastFPS=t;}
+
+  // Camera
+  if(cinema){
+    cinemaT=t*.00028;const r2=26+Math.sin(cinemaT*.6)*7;
+    cam.position.x=Math.sin(cinemaT)*Math.cos(Math.sin(cinemaT*.4)*.6)*r2;
+    cam.position.y=7+Math.sin(cinemaT*.35)*9;cam.position.z=Math.cos(cinemaT)*r2;
+  } else {
+    if(autoRot)rotY+=.002;
+    cam.position.x=Math.sin(rotY)*Math.cos(rotX)*dist;
+    cam.position.y=Math.sin(rotX)*dist+3;cam.position.z=Math.cos(rotY)*Math.cos(rotX)*dist;
+  }
+  cam.lookAt(0,0,0);
+
+  // Lights
+  rim.intensity=2.5+Math.sin(t*.0008)*1.2;rim.position.x=Math.sin(t*.0009)*14;rim.position.z=Math.cos(t*.0009)*14;
+  topL.intensity=1.2+Math.cos(t*.001)*.8;botL.intensity=1.5+Math.sin(t*.0013)*.7;fill.intensity=1.5+Math.cos(t*.0007)*.5;
+
+  // MC
+  const rate=simMode==='slow'?220:55;
+  if(running&&t-lastDraw>rate){
+    lastDraw=t;const steps=simMode==='slow'?1:5;let lastAcc=0;
+    for(let k=0;k<steps;k++){
+      const a=sweep();stepCount++;swSec++;lastAcc=a;
+      mH.push(totalM());eH.push(totalE());aH.push(a);
+    }
+    if(mH.length>900){mH.splice(0,steps);eH.splice(0,steps);}
+    if(aH.length>450)aH.splice(0,steps);
+    const now=performance.now();
+    if(now-lastSec>1000){$set('cSw',swSec);swSec=0;lastSec=now;}
+    updCounts(lastAcc);pulseAtom(lastM.i,lastM.ok);updAtoms();updMetro();
+    if(frame%3===0){updObs();updPhase();}
+    if(frame%4===0){drawChart('cvM',mH.slice(-400),'#34d399');drawChart('cvE',eH.slice(-400),'#60a5fa');
+      if(curMobTab===1)drawChart('cvMm',mH.slice(-400),'#34d399');
+      if(curMobTab===2)drawChart('cvEm',eH.slice(-400),'#60a5fa');
+      if(drawerOpen&&curDTab===1)drawChart('cvMd',mH.slice(-400),'#34d399');
+      if(drawerOpen&&curDTab===2)drawChart('cvEd',eH.slice(-400),'#60a5fa');}
+    if(frame%7===0){drawHistC('cvH');if(curMobTab===3){drawHistC('cvHm');drawDomC('cvDomm');}
+      if(drawerOpen&&curDTab===3){drawHistC('cvHd');drawDomC('cvDomd');}}
+    if(frame%14===0){drawDomC('cvDom');drawPhaseC('cvPh');if(curMobTab===4)drawPhaseC('cvPhm');
+      if(drawerOpen&&curDTab===4)drawPhaseC('cvPhd');}
+  }
+  updWaves();updParts();renderer.render(scene,cam);
+}
+
+addEventListener('resize',()=>{
+  renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
+});
+
+// INIT
+initL(8);buildScene();buildStars();buildLeg();updSliders();
+drawAll();$set('nVal',N);
+loop(0);
+</script>
+</body>
+</html>
