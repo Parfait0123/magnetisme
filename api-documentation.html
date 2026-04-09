@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breast Cancer API — Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg2: #0f1520;
+    --bg3: #141c2b;
+    --border: rgba(99,179,255,0.12);
+    --border2: rgba(99,179,255,0.22);
+    --accent: #4facfe;
+    --accent2: #00f2fe;
+    --pink: #f857a6;
+    --green: #00e5a0;
+    --amber: #ffb347;
+    --red: #ff6b6b;
+    --text: #e8f0ff;
+    --text2: #8899bb;
+    --text3: #55688a;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID BG ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,172,254,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,172,254,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── GLOW ORBS ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { width: 600px; height: 600px; background: rgba(79,172,254,0.07); top: -200px; right: -100px; }
+  .orb2 { width: 400px; height: 400px; background: rgba(248,87,166,0.05); bottom: 200px; left: -100px; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,14,20,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 48px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-logo .dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--accent); }
+
+  .nav-badge {
+    background: rgba(79,172,254,0.1);
+    border: 1px solid var(--border2);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.2);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 28px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(38px, 5vw, 62px);
+    font-weight: 300;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 17px;
+    color: var(--text2);
+    max-width: 580px;
+    margin-bottom: 48px;
+    font-weight: 300;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hero-meta-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--mono);
+  }
+
+  .hero-meta-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  /* ── URL BAR ── */
+  .url-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin: 48px 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .url-bar-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  .url-bar-value {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent2);
+    word-break: break-all;
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    padding: 72px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin-bottom: 40px;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: 0.01em;
+  }
+
+  p {
+    color: var(--text2);
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+
+  /* ── ENDPOINT CARDS ── */
+  .endpoints-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .endpoint-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .endpoint-card:hover { border-color: var(--border2); }
+
+  .endpoint-header {
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .method-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .get { background: rgba(0,229,160,0.12); color: var(--green); border: 1px solid rgba(0,229,160,0.2); }
+  .post { background: rgba(79,172,254,0.12); color: var(--accent); border: 1px solid rgba(79,172,254,0.2); }
+
+  .endpoint-path {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .endpoint-desc {
+    font-size: 13px;
+    color: var(--text3);
+  }
+
+  .endpoint-auth {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--amber);
+    background: rgba(255,179,71,0.08);
+    border: 1px solid rgba(255,179,71,0.15);
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .endpoint-auth.public {
+    color: var(--green);
+    background: rgba(0,229,160,0.08);
+    border-color: rgba(0,229,160,0.15);
+  }
+
+  .endpoint-body {
+    border-top: 1px solid var(--border);
+    padding: 28px;
+    display: none;
+  }
+
+  .endpoint-body.open { display: block; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    background: var(--bg3);
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--text3);
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+  }
+
+  .tab.active {
+    background: var(--bg2);
+    color: var(--accent);
+    border: 1px solid var(--border2);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .code-lang {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .copy-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover { color: var(--accent); border-color: var(--border2); }
+
+  pre {
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text2);
+  }
+
+  .kw { color: var(--pink); }
+  .str { color: var(--green); }
+  .cmt { color: var(--text3); font-style: italic; }
+  .fn { color: var(--accent); }
+  .num { color: var(--amber); }
+  .key { color: var(--accent2); }
+
+  /* ── RESPONSE BLOCK ── */
+  .response-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 20px;
+  }
+
+  .response-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,229,160,0.03);
+  }
+
+  .status-200 {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--green);
+    background: rgba(0,229,160,0.1);
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+
+  .response-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── PARAMS TABLE ── */
+  .params-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+
+  .params-table th {
+    text-align: left;
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .params-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(99,179,255,0.06);
+    color: var(--text2);
+    vertical-align: top;
+  }
+
+  .params-table tr:last-child td { border-bottom: none; }
+
+  .param-name { font-family: var(--mono); color: var(--accent2); font-size: 13px; }
+  .param-type { font-family: var(--mono); color: var(--pink); font-size: 12px; }
+  .param-required {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    background: rgba(255,107,107,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .param-optional {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* ── AUTH SECTION ── */
+  .auth-card {
+    background: var(--bg2);
+    border: 1px solid rgba(255,179,71,0.2);
+    border-radius: 16px;
+    padding: 32px;
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+  }
+
+  .auth-icon {
+    width: 48px; height: 48px;
+    background: rgba(255,179,71,0.1);
+    border: 1px solid rgba(255,179,71,0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  /* ── CLASSES GRID ── */
+  .classes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .classes-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  .classes-card h3 {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .model-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .binary-tag { background: rgba(79,172,254,0.1); color: var(--accent); border: 1px solid rgba(79,172,254,0.2); }
+  .multi-tag { background: rgba(248,87,166,0.1); color: var(--pink); border: 1px solid rgba(248,87,166,0.2); }
+
+  .class-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .class-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .class-name { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .class-type {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .benign { color: var(--green); background: rgba(0,229,160,0.08); }
+  .malignant { color: var(--red); background: rgba(255,107,107,0.08); }
+
+  /* ── ERRORS TABLE ── */
+  .errors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .error-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .error-code {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    flex-shrink: 0;
+    width: 48px;
+  }
+
+  .e401 { color: var(--amber); }
+  .e403 { color: var(--red); }
+  .e413 { color: var(--pink); }
+  .e415 { color: var(--pink); }
+  .e422 { color: var(--accent); }
+  .e429 { color: var(--amber); }
+  .e500 { color: var(--red); }
+  .e200 { color: var(--green); }
+
+  .error-info h4 {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .error-info p {
+    font-size: 12px;
+    color: var(--text3);
+    margin: 0;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 48px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text3);
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  /* ── CHEVRON ── */
+  .chevron {
+    width: 20px; height: 20px;
+    color: var(--text3);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .chevron.open { transform: rotate(180deg); }
+
+  /* ── INFO BOX ── */
+  .info-box {
+    background: rgba(79,172,254,0.05);
+    border: 1px solid rgba(79,172,254,0.15);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text2);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .info-box .icon { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+  @media (max-width: 768px) {
+    .wrapper { padding: 0 24px; }
+    nav { padding: 0 24px; }
+    .nav-links { display: none; }
+    .classes-grid { grid-template-columns: 1fr; }
+    .auth-card { flex-direction: column; gap: 20px; }
+    .hero-meta { gap: 24px; }
+  }
+
+.hero-actions {
+  margin: 20px 0 30px;
+}
+
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #20beff; /* Bleu Kaggle ou la couleur de ton thème */
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.hero-btn:hover {
+  opacity: 0.9;
+}
+
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="dot"></span>
+    Breast Cancer API
+  </div>
+  <ul class="nav-links">
+    <li><a href="#auth">Authentification</a></li>
+    <li><a href="#endpoints">Endpoints</a></li>
+    <li><a href="#classes">Classes</a></li>
+    <li><a href="#errors">Erreurs</a></li>
+  </ul>
+  <span class="nav-badge">v1.0.0</span>
+</nav>
+
+<!-- HERO -->
+<div class="wrapper">
+  <div class="hero">
+    <div class="hero-tag">
+      <span>●</span> API opérationnelle
+    </div>
+    <h1>Breast Cancer<br><em>Detection API</em></h1>
+    <p class="hero-sub">
+      Classification histologique du cancer du sein par deep learning.
+      Deux modèles EfficientNetV2S fine-tunés sur le dataset BreaKHis — binaire et 8 classes.
+    </p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Modèle</span>
+        <span class="hero-meta-value">EfficientNetV2S</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Dataset</span>
+        <span class="hero-meta-value">BreaKHis 40X</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Input</span>
+        <span class="hero-meta-value">200 × 200 px</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Précision binaire</span>
+        <span class="hero-meta-value">100%</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Rate limit</span>
+        <span class="hero-meta-value">60 req / min</span>
+      </div>
+    </div>
+
+<div class="hero-actions">
+      <a href="URL_DE_TON_NOTEBOOK_KAGGLE" target="_blank" class="hero-btn">
+        <img src="https://kaggle.com" width="20" alt="Kaggle">
+        Voir le Notebook Kaggle
+      </a>
+    </div>
+
+  </div>
+
+  <!-- BASE URL -->
+  <div class="url-bar">
+    <span class="url-bar-label">Base URL</span>
+    <span class="url-bar-value">https://parfait60-breast-cancer-classification-api.hf.space</span>
+  </div>
+
+  <!-- AUTH -->
+  <section id="auth">
+    <div class="section-tag">01 — Authentification</div>
+    <h2>API Key</h2>
+
+    <div class="auth-card">
+      <div class="auth-icon">🔑</div>
+      <div>
+        <h3>Header requis sur tous les endpoints de prédiction</h3>
+        <p>Chaque requête de prédiction doit inclure le header <code style="font-family:var(--mono);color:var(--accent2);font-size:13px">X-API-Key</code> avec la clé fournie. Le endpoint <code style="font-family:var(--mono);color:var(--green);font-size:13px">/health</code> est public.</p>
+
+        <div class="code-block" style="margin-top:16px">
+          <div class="code-header">
+            <span class="code-lang">Header</span>
+          </div>
+          <pre>X-API-Key: <span class="str">Test123</span></pre>
+        </div>
+
+        <p style="font-size:13px;color:var(--text3);margin:0">En cas d'absence → <span style="color:var(--amber)">401 Unauthorized</span> &nbsp;·&nbsp; Clé incorrecte → <span style="color:var(--red)">403 Forbidden</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENDPOINTS -->
+  <section id="endpoints">
+    <div class="section-tag">02 — Endpoints</div>
+    <h2>Référence complète</h2>
+
+    <div class="endpoints-grid">
+
+      <!-- HEALTH -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggle(this)">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/api/v1/health</span>
+          <span class="endpoint-desc">Statut de l'API</span>
+          <span class="endpoint-auth public">Public</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="endpoint-body">
+          <p>Vérifie que l'API est opérationnelle et que les deux modèles sont chargés. Aucune authentification requise.</p>
+
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">cURL</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="fn">curl</span> https://parfait60-breast-cancer-classification-api.hf.space/api/v1/health</pre>
+          </div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">JavaScript</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copier</button>
+            </div>
+            <pre><span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://parfait60-breast-cancer-classification-api.hf.space/api/v1/health'</span>);
+<span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();</pre>
+          </div>
+
+          <div class="response-block">
+            <div class="response-header">
+              <span class="status-200">200</span>
+              <span class="response-label">Réponse</span>
+            </div>
+            <pre>{
+  <span class="key">"status"</span>: <span class="str">"ok"</span>,
+  <span class="key">"models_loaded"</span>: {
+    <span class="key">"binary"</span>: <span class="num">true</span>,
+    <span class="key">"multiclass"</span>: <span class="num">true</span>
+  },
+  <span class="key">"version"</span>: <span class="str">"1.0.0"</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREDICT BINARY UPLOAD -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggle(this)">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/api/v1/predict/binary</span>
+          <span class="endpoint-desc">Prédiction binaire — upload</span>
+          <span class="endpoint-auth">🔒 Auth</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="endpoint-body">
+          <p>Classifie une image histologique en <strong style="color:var(--green)">Benign</strong> (bénin) ou <strong style="color:var(--red)">Malignant</strong> (malin). Corps de la requête en <code style="font-family:var(--mono);font-size:12px;color:var(--accent2)">multipart/form-data</code>.</p>
+
+          <h3>Paramètres</h3>
+          <table class="params-table">
+            <thead><tr><th>Champ</th><th>Type</th><th>Statut</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="param-name">file</span></td>
+                <td><span class="param-type">File</span></td>
+                <td><span class="param-required">Requis</span></td>
+                <td>Image JPEG, PNG, TIFF ou BMP · max 10 MB</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="tabs" id="tabs-binary-upload">
+            <button class="tab active" onclick="switchTab('binary-upload', 'curl', this)">cURL</button>
+            <button class="tab" onclick="switchTab('binary-upload', 'js', this)">JavaScript</button>
+            <button class="tab" onclick="switchTab('binary-upload', 'python', this)">Python</button>
+          </div>
+
+          <div id="binary-upload-curl" class="tab-content active">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="fn">curl</span> -X POST \
+  https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/binary \
+  -H <span class="str">"X-API-Key: votre-clé-api"</span> \
+  -F <span class="str">"file=@/chemin/image.png"</span></pre>
+            </div>
+          </div>
+
+          <div id="binary-upload-js" class="tab-content">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">JavaScript</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="kw">const</span> formData = <span class="kw">new</span> <span class="fn">FormData</span>();
+formData.<span class="fn">append</span>(<span class="str">'file'</span>, imageFile); <span class="cmt">// imageFile = objet File du &lt;input&gt;</span>
+
+<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="str">'https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/binary'</span>,
+  {
+    method: <span class="str">'POST'</span>,
+    headers: { <span class="str">'X-API-Key'</span>: <span class="str">'votre-clé-api'</span> },
+    body: formData,
+  }
+);
+<span class="kw">const</span> result = <span class="kw">await</span> response.<span class="fn">json</span>();
+
+console.<span class="fn">log</span>(result.prediction);  <span class="cmt">// "Malignant"</span>
+console.<span class="fn">log</span>(result.confidence);  <span class="cmt">// 0.987432</span></pre>
+            </div>
+          </div>
+
+          <div id="binary-upload-python" class="tab-content">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="kw">import</span> requests
+
+url = <span class="str">"https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/binary"</span>
+headers = {<span class="str">"X-API-Key"</span>: <span class="str">"votre-clé-api"</span>}
+
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"image.png"</span>, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+    response = requests.<span class="fn">post</span>(url, headers=headers, files={<span class="str">"file"</span>: f})
+
+result = response.<span class="fn">json</span>()
+<span class="fn">print</span>(result[<span class="str">"prediction"</span>])   <span class="cmt"># "Malignant"</span>
+<span class="fn">print</span>(result[<span class="str">"confidence"</span>])   <span class="cmt"># 0.987432</span></pre>
+            </div>
+          </div>
+
+          <div class="response-block">
+            <div class="response-header">
+              <span class="status-200">200</span>
+              <span class="response-label">Réponse</span>
+            </div>
+            <pre>{
+  <span class="key">"model"</span>: <span class="str">"binary"</span>,
+  <span class="key">"prediction"</span>: <span class="str">"Malignant"</span>,
+  <span class="key">"confidence"</span>: <span class="num">0.987432</span>,
+  <span class="key">"probabilities"</span>: {
+    <span class="key">"Benign"</span>: <span class="num">0.012568</span>,
+    <span class="key">"Malignant"</span>: <span class="num">0.987432</span>
+  }
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREDICT BINARY BASE64 -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggle(this)">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/api/v1/predict/binary/base64</span>
+          <span class="endpoint-desc">Prédiction binaire — Base64</span>
+          <span class="endpoint-auth">🔒 Auth</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="endpoint-body">
+          <p>Même prédiction binaire mais l'image est envoyée en JSON encodé Base64. Utile quand l'image est déjà en mémoire côté client.</p>
+
+          <h3>Body JSON</h3>
+          <table class="params-table">
+            <thead><tr><th>Champ</th><th>Type</th><th>Statut</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="param-name">image</span></td>
+                <td><span class="param-type">string</span></td>
+                <td><span class="param-required">Requis</span></td>
+                <td>Image en Base64 · raw ou avec préfixe <code style="font-family:var(--mono);font-size:12px">data:image/...;base64,</code></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="tabs" id="tabs-binary-b64">
+            <button class="tab active" onclick="switchTab('binary-b64', 'js', this)">JavaScript</button>
+            <button class="tab" onclick="switchTab('binary-b64', 'python', this)">Python</button>
+          </div>
+
+          <div id="binary-b64-js" class="tab-content active">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">JavaScript</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="cmt">// Convertir un File en base64</span>
+<span class="kw">const</span> <span class="fn">toBase64</span> = (file) => <span class="kw">new</span> <span class="fn">Promise</span>((resolve) => {
+  <span class="kw">const</span> reader = <span class="kw">new</span> <span class="fn">FileReader</span>();
+  reader.onload = (e) => <span class="fn">resolve</span>(e.target.result);
+  reader.<span class="fn">readAsDataURL</span>(file);
+});
+
+<span class="kw">const</span> base64 = <span class="kw">await</span> <span class="fn">toBase64</span>(imageFile);
+
+<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="str">'https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/binary/base64'</span>,
+  {
+    method: <span class="str">'POST'</span>,
+    headers: {
+      <span class="str">'X-API-Key'</span>: <span class="str">'votre-clé-api'</span>,
+      <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+    },
+    body: <span class="fn">JSON.stringify</span>({ image: base64 }),
+  }
+);</pre>
+            </div>
+          </div>
+
+          <div id="binary-b64-python" class="tab-content">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="kw">import</span> base64, requests
+
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"image.png"</span>, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+    b64 = base64.<span class="fn">b64encode</span>(f.<span class="fn">read</span>()).<span class="fn">decode</span>()
+
+response = requests.<span class="fn">post</span>(
+    <span class="str">"https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/binary/base64"</span>,
+    headers={<span class="str">"X-API-Key"</span>: <span class="str">"votre-clé-api"</span>},
+    json={<span class="str">"image"</span>: b64}
+)</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREDICT MULTICLASS -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggle(this)">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/api/v1/predict/multiclass</span>
+          <span class="endpoint-desc">Classification 8 classes — upload</span>
+          <span class="endpoint-auth">🔒 Auth</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="endpoint-body">
+          <p>Classifie l'image parmi 8 types histologiques du dataset BreaKHis. Retourne les probabilités pour chaque classe et un top 3.</p>
+
+          <div class="tabs" id="tabs-multi">
+            <button class="tab active" onclick="switchTab('multi', 'js', this)">JavaScript</button>
+            <button class="tab" onclick="switchTab('multi', 'python', this)">Python</button>
+          </div>
+
+          <div id="multi-js" class="tab-content active">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">JavaScript</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="kw">const</span> formData = <span class="kw">new</span> <span class="fn">FormData</span>();
+formData.<span class="fn">append</span>(<span class="str">'file'</span>, imageFile);
+
+<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="str">'https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/multiclass'</span>,
+  {
+    method: <span class="str">'POST'</span>,
+    headers: { <span class="str">'X-API-Key'</span>: <span class="str">'votre-clé-api'</span> },
+    body: formData,
+  }
+);
+<span class="kw">const</span> result = <span class="kw">await</span> response.<span class="fn">json</span>();
+
+console.<span class="fn">log</span>(result.prediction);    <span class="cmt">// "Fibroadenoma"</span>
+console.<span class="fn">log</span>(result.top3);          <span class="cmt">// [{label, confidence}, ...]</span></pre>
+            </div>
+          </div>
+
+          <div id="multi-python" class="tab-content">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+              <pre><span class="kw">import</span> requests
+
+url = <span class="str">"https://parfait60-breast-cancer-classification-api.hf.space/api/v1/predict/multiclass"</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"image.png"</span>, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+    response = requests.<span class="fn">post</span>(url,
+        headers={<span class="str">"X-API-Key"</span>: <span class="str">"votre-clé-api"</span>},
+        files={<span class="str">"file"</span>: f}
+    )
+result = response.<span class="fn">json</span>()
+<span class="fn">print</span>(result[<span class="str">"top3"</span>])</pre>
+            </div>
+          </div>
+
+          <div class="response-block">
+            <div class="response-header">
+              <span class="status-200">200</span>
+              <span class="response-label">Réponse</span>
+            </div>
+            <pre>{
+  <span class="key">"model"</span>: <span class="str">"multiclass"</span>,
+  <span class="key">"prediction"</span>: <span class="str">"Fibroadenoma"</span>,
+  <span class="key">"confidence"</span>: <span class="num">0.823451</span>,
+  <span class="key">"probabilities"</span>: {
+    <span class="key">"Adenosis"</span>: <span class="num">0.012341</span>,
+    <span class="key">"Fibroadenoma"</span>: <span class="num">0.823451</span>,
+    <span class="key">"FEA"</span>: <span class="num">0.031200</span>,
+    <span class="key">"LN"</span>: <span class="num">0.008900</span>,
+    <span class="key">"MC"</span>: <span class="num">0.054312</span>,
+    <span class="key">"PC"</span>: <span class="num">0.023100</span>,
+    <span class="key">"PT"</span>: <span class="num">0.034500</span>,
+    <span class="key">"TA"</span>: <span class="num">0.012196</span>
+  },
+  <span class="key">"top3"</span>: [
+    { <span class="key">"label"</span>: <span class="str">"Fibroadenoma"</span>, <span class="key">"confidence"</span>: <span class="num">0.823451</span> },
+    { <span class="key">"label"</span>: <span class="str">"MC"</span>, <span class="key">"confidence"</span>: <span class="num">0.054312</span> },
+    { <span class="key">"label"</span>: <span class="str">"PT"</span>, <span class="key">"confidence"</span>: <span class="num">0.034500</span> }
+  ]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREDICT MULTICLASS BASE64 -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggle(this)">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/api/v1/predict/multiclass/base64</span>
+          <span class="endpoint-desc">Classification 8 classes — Base64</span>
+          <span class="endpoint-auth">🔒 Auth</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="endpoint-body">
+          <p>Version Base64 du endpoint multiclasse. Body JSON identique à <code style="font-family:var(--mono);font-size:12px;color:var(--accent2)">/predict/binary/base64</code> — même format <code style="font-family:var(--mono);font-size:12px;color:var(--accent2)">{ "image": "..." }</code>. Réponse identique à <code style="font-family:var(--mono);font-size:12px;color:var(--accent2)">/predict/multiclass</code>.</p>
+
+          <div class="info-box">
+            <span class="icon">ℹ</span>
+            <span>Même logique que <strong>/predict/binary/base64</strong> — seul le endpoint change. Remplacer <code style="font-family:var(--mono);font-size:12px">/binary/</code> par <code style="font-family:var(--mono);font-size:12px">/multiclass/</code> dans l'URL.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CLASSES -->
+  <section id="classes">
+    <div class="section-tag">03 — Modèles & Classes</div>
+    <h2>Classes de sortie</h2>
+
+    <div class="classes-grid">
+      <div class="classes-card">
+        <h3>Modèle binaire <span class="model-tag binary-tag">binary</span></h3>
+        <div class="class-list">
+          <div class="class-item">
+            <span class="class-name">Benign</span>
+            <span class="class-type benign">Bénin</span>
+          </div>
+          <div class="class-item">
+            <span class="class-name">Malignant</span>
+            <span class="class-type malignant">Malin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="classes-card">
+        <h3>Modèle 8 classes <span class="model-tag multi-tag">multiclass</span></h3>
+        <div class="class-list">
+          <div class="class-item"><span class="class-name">Adenosis</span><span class="class-type benign">Bénin</span></div>
+          <div class="class-item"><span class="class-name">Fibroadenoma</span><span class="class-type benign">Bénin</span></div>
+          <div class="class-item"><span class="class-name">FEA</span><span class="class-type benign">Bénin</span></div>
+          <div class="class-item"><span class="class-name">LN</span><span class="class-type benign">Bénin</span></div>
+          <div class="class-item"><span class="class-name">MC</span><span class="class-type malignant">Malin</span></div>
+          <div class="class-item"><span class="class-name">PC</span><span class="class-type malignant">Malin</span></div>
+          <div class="class-item"><span class="class-name">PT</span><span class="class-type malignant">Malin</span></div>
+          <div class="class-item"><span class="class-name">TA</span><span class="class-type malignant">Malin</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREPROCESSING NOTE -->
+    <div class="info-box" style="margin-top:24px">
+      <span class="icon">⚙</span>
+      <div>
+        <strong>Preprocessing appliqué automatiquement par l'API</strong><br>
+        <span style="color:var(--text3)">Resize 200×200 · Normalisation mean=[0.804, 0.653, 0.774] std=[0.092, 0.119, 0.091] · Les images sont acceptées en toute taille — le redimensionnement est géré côté serveur.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ERRORS -->
+  <section id="errors">
+    <div class="section-tag">04 — Gestion des erreurs</div>
+    <h2>Codes HTTP</h2>
+
+    <div class="errors-grid">
+      <div class="error-card">
+        <span class="error-code e200">200</span>
+        <div class="error-info">
+          <h4>Success</h4>
+          <p>Prédiction effectuée avec succès.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e401">401</span>
+        <div class="error-info">
+          <h4>Unauthorized</h4>
+          <p>Header X-API-Key manquant dans la requête.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e403">403</span>
+        <div class="error-info">
+          <h4>Forbidden</h4>
+          <p>Valeur de l'API Key incorrecte.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e413">413</span>
+        <div class="error-info">
+          <h4>Too Large</h4>
+          <p>Image trop volumineuse. Limite : 10 MB.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e415">415</span>
+        <div class="error-info">
+          <h4>Unsupported Media</h4>
+          <p>Format non accepté. Utiliser JPEG, PNG, TIFF ou BMP.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e422">422</span>
+        <div class="error-info">
+          <h4>Unprocessable</h4>
+          <p>Image corrompue ou Base64 invalide.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e429">429</span>
+        <div class="error-info">
+          <h4>Too Many Requests</h4>
+          <p>Limite de 60 requêtes/minute par IP dépassée.</p>
+        </div>
+      </div>
+      <div class="error-card">
+        <span class="error-code e500">500</span>
+        <div class="error-info">
+          <h4>Internal Error</h4>
+          <p>Erreur interne du serveur.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top:32px">
+      <div class="code-header">
+        <span class="code-lang">Format d'erreur</span>
+      </div>
+      <pre>{
+  <span class="key">"detail"</span>: <span class="str">"Description de l'erreur"</span>,
+  <span class="key">"code"</span>: <span class="str">"INTERNAL_ERROR"</span>
+}</pre>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span>Breast Cancer Detection API · v1.0.0</span>
+    <span>EfficientNetV2S · BreaKHis 40X · Parfait BOTCHI</span>
+    <span>HuggingFace Spaces · FastAPI · PyTorch</span>
+  </footer>
+
+</div>
+
+<script>
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.classList.toggle('open', !isOpen);
+}
+
+function switchTab(group, tab, btn) {
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(el => {
+    el.classList.remove('active');
+  });
+  document.getElementById(`${group}-${tab}`).classList.add('active');
+
+  const tabContainer = btn.closest('.tabs');
+  tabContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copié !';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = 'Copier';
+      btn.style.color = '';
+    }, 2000);
+  });
+}
+
+// Auto-open first endpoint
+document.querySelector('.endpoint-header').click();
+</script>
+</body>
+</html>
